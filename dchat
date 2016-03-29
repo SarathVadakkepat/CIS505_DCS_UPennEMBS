@@ -1,0 +1,68 @@
+/**
+Description:
+Authors:
+**/
+
+
+#include <fcntl.h>
+#include <string.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <stdio.h>
+#include <netinet/in.h>
+#include <resolv.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <iostream>
+using namespace std;
+
+#define PORT 6510
+
+class ChatUser
+{
+private:
+		char name[30];
+		int UIRI;
+		int portNumber;
+		int multipleGrp[10];
+		char ipAddr[20];
+		bool isSequencer=false;
+public:
+			
+};
+
+//Declaration of global variables
+struct sockaddr_in serv_addr;
+int servLen=sizeof(struct sockaddr_in);
+
+//Method to print error messages
+void error(const char *msg)
+{
+    perror(msg);
+    exit(-1);
+}
+
+int main(int argc, char* argv[]){
+ 
+ if(argc==2)
+	 {
+		 cout<<"New chat group Initiated"<<endl;
+	 }
+	 
+	 else if(argc==3)
+	 {
+		
+		 cout<<"Attempting to join an existing chat......"<<endl;
+		 
+	 }
+	 else
+	 {
+		 cout<<"Error:Invalid arguments"<<endl;
+		 return -1;
+	 }
+	 
+}
+
+
