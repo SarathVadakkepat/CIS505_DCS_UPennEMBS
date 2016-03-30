@@ -28,7 +28,8 @@ struct Message
   }msg;
 
 
-
+int sockfds[20]={};
+int sockcount=0;
 
 //Class for users in a group chat
 class ChatUser
@@ -79,6 +80,8 @@ void existGrpChat(ChatUser newUser){
         fprintf(stderr, "inet_aton() failed\n");
         exit(1);
 		}
+		
+		add_socket(s);
 
 		 /* if( inet_pton( AF_INET, newUser.seqIpAddr, &si_other.sin_addr ) <= 0 ) {
 		  perror( "inet_pton for address" );
@@ -143,19 +146,26 @@ void newGrpChat(ChatUser initSeq){
 			string tmp(msg.IncomingMessage);
 			string newMessage;
 			if(strcmp(msg.IncomingMessage,"JOIN") == 0)
-				//"\n"+initSeq.name+" "+initSeq.ipAddr+":"+initSeq.portNumber+" "+"(LEADER)\0"
 				newMessage="Succeeded, current users:\0";	
 			else
 				newMessage="Sorry :(\0";
 			
-			strcpy(msg.IncomingMessage, newMessage.c_str());	
-		    if (sendto(sock, &msg, sizeof(struct Message), 0 , (struct sockaddr *) &si_other, slen)==-1) {
+			strcpy(msg.IncomingMessage, newMessage.c_str());
+			for(int i=0;i<sizeof(sockfds)/4;i++){
+		    if (sendto(sockfds[i], &msg, sizeof(struct Message), 0 , (struct sockaddr *) &si_other, slen)==-1) {
               error("sendto()");
-            }
+				}
+			}
 		 	 
 		}
 
     return;
+}
+
+void add_socket(int sock){
+	
+	sockfds[sockcount]=sock;
+	t++;
 }
 
 string getIP()	{
