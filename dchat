@@ -20,17 +20,46 @@ using namespace std;
 
 #define PORT 6510
 
+enum class MsgType { JOIN, QUIT, SEQ_ALIVE , USER_ALIVE, ELECT, LEADER, ACK, STATUS };
+
+struct sendInfo
+{
+	int portNumber;
+	string ipAddr;
+	
+};
+
+
+//Class for users in a group chat
 class ChatUser
 {
 private:
-		char name[30];
+		string name;
 		int UIRI;
 		int portNumber;
-		int multipleGrp[10];
-		char ipAddr[20];
+		string ipAddr;
 		bool isSequencer=false;
+		int leaderPortNum;
 public:
-			
+		//other methods that are needed
+		getIpAddr(){
+		}	
+		getPortNum(){
+		}
+};
+
+
+class Message
+{
+private:
+	   MsgType msgType;
+	   sendInfo srcInfo;
+	   sendInfo dstInfo;
+	   string msg;
+	   string sendTimeStamp;
+	   string recvTimeStamp;
+public:
+
 };
 
 //Declaration of global variables
@@ -44,17 +73,56 @@ void error(const char *msg)
     exit(-1);
 }
 
+int createSocket(int portNum)
+{
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd < 0) error("ERROR creating socket");
+     
+	 bzero((char *) &serv_addr, sizeof(serv_addr));
+     serv_addr.sin_family = AF_INET;
+     serv_addr.sin_addr.s_addr = INADDR_ANY;
+     serv_addr.sin_port = htons(portNum);
+
+     return sockfd;
+}
+
+void newGrpChat(int sockfd, ChatUser initSeq){
+	
+	if (bind(sockfd, (char*)&serv_addr, servLen) == -1) {
+            close(sockfd);
+            perror("listener: bind");
+            continue;
+        }
+    return;
+}
+
+
+
 int main(int argc, char* argv[]){
  
  if(argc==2)
 	 {
 		 cout<<"New chat group Initiated"<<endl;
+		 ChatUser initSeq;
+		 initSeq.isSequencer=true;
+		 initSeq.ipAddr="sarathlogic";
+		 initSeq.portNumber=1023+(rand()%1000);
+		 initSeq.name=argv[1];
+		 initSeq.leaderPortNum=initSeq.portNumber;
+		 initSeq.UIRI++;
+		 int sockfd=createSocket(PORT);
+		 newGrpChat(sockfd,initSeq);
 	 }
 	 
 	 else if(argc==3)
 	 {
-		
 		 cout<<"Attempting to join an existing chat......"<<endl;
+		 ChatUser newUser;
+		 newUser.isSequencer=false;
+		 newUser.ipAddr="sarathlogic";
+		 newUser.portNumber=1023+(rand()%1000);
+		 newUser.name=argv[1];
+
 		 
 	 }
 	 else
@@ -62,6 +130,8 @@ int main(int argc, char* argv[]){
 		 cout<<"Error:Invalid arguments"<<endl;
 		 return -1;
 	 }
+
+	 createSocket();
 	 
 }
 
