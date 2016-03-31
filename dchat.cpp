@@ -27,11 +27,6 @@ struct Message
 
   }msg;
 
-
-int sockfds[20]={};
-int sockcount=0;
-
-
 //Variables if a client
  struct sockaddr_in newUser_si_other;
  int newUser_s, newUser_i;
@@ -41,11 +36,6 @@ int sockcount=0;
 void *receiver_handler(void *);
 void *sender_handler(void *);
 sockaddr_in clientList[10]; int clientListCtr=0;
-
-
-
-
-
 
 //Class for users in a group chat
 class ChatUser
@@ -58,12 +48,6 @@ public:
 		bool isSequencer=false;
 		int leaderPortNum;
 		string seqIpAddr;
-//public:
-		//other methods that are needed
-		//getIpAddr(){
-		//}	
-		//getPortNum(){
-		//}
 };
 
 
@@ -97,15 +81,9 @@ void existGrpChat(ChatUser newUser){
 		if (sendto(newUser_s, &msg, sizeof(struct Message), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
            error("sendto()");
         }
-        
-        
-		 /* if( inet_pton( AF_INET, newUser.seqIpAddr, &si_other.sin_addr ) <= 0 ) {
-		  perror( "inet_pton for address" );
-		  exit( 99 );
-   	 	 }*/
 		 		
 		//TODO : Remove the junk field and figure to pass null
-		 int junk=0;
+		int junk=0;
 		pthread_t thread_id;
 		pthread_create( &thread_id , NULL ,  receiver_handler,(void*) &junk);
 		pthread_create( &thread_id , NULL ,  sender_handler,(void*) &junk);
@@ -113,39 +91,37 @@ void existGrpChat(ChatUser newUser){
 		 //Replace while with thread join
 		while(1){
 		}
-	
-
 }
 
 //Method to initiate sequencer
 void newGrpChat(ChatUser initSeq){
 		 
-		 cout<<initSeq.name<<" started a new chat, listening on "<<initSeq.ipAddr<<":"<<initSeq.portNumber<<endl;
-	 	 cout<<"Succeeded, current users:"<<endl;
-		 cout<<initSeq.name<<" "<<initSeq.ipAddr<<"."<<initSeq.portNumber<<" (Leader)"<<endl;
-		 cout<<"Waiting for others to join..."<<endl;
+		cout<<initSeq.name<<" started a new chat, listening on "<<initSeq.ipAddr<<":"<<initSeq.portNumber<<endl;
+	 	cout<<"Succeeded, current users:"<<endl;
+		cout<<initSeq.name<<" "<<initSeq.ipAddr<<"."<<initSeq.portNumber<<" (Leader)"<<endl;
+		cout<<"Waiting for others to join..."<<endl;
 		 	 
-		 struct sockaddr_in si_me, si_other;
-		 int sock, i, recv_len;
-		 socklen_t slen= sizeof(si_other);
+		struct sockaddr_in si_me, si_other;
+		int sock, i, recv_len;
+		socklen_t slen= sizeof(si_other);
 	 
 	 
-		 if ((sock=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
-       	 error("socket");
-   		 }
+		if ((sock=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
+			error("socket");
+   		}
      
-   		 memset((char *) &si_me, 0, sizeof(si_me));
+   		memset((char *) &si_me, 0, sizeof(si_me));
      
-    	 si_me.sin_family = AF_INET;
-    	 si_me.sin_port = htons(5000);
-    	 si_me.sin_addr.s_addr = htonl(INADDR_ANY);
+    	si_me.sin_family = AF_INET;
+    	si_me.sin_port = htons(5000);
+    	si_me.sin_addr.s_addr = htonl(INADDR_ANY);
 
-		 if( bind(sock , (struct sockaddr*)&si_me, sizeof(si_me) ) == -1) {
+		if( bind(sock , (struct sockaddr*)&si_me, sizeof(si_me) ) == -1) {
         	error("bind");
-    	 }
+    	}
 
 
-    	 while(1)
+    	while(1)
     	{
             if ((recv_len = recvfrom(sock, &msg, sizeof(struct Message), 0, (struct sockaddr *) &si_other, &slen)) == -1) {
               error("recvfrom()");
@@ -158,8 +134,6 @@ void newGrpChat(ChatUser initSeq){
 			
 			if(!isExisting)	clientList[clientListCtr++]=si_other;
 			//End Logic
-				
-		
 			 
 		    cout << msg.IncomingMessage << endl; 
 			string tmp(msg.IncomingMessage);
@@ -167,28 +141,20 @@ void newGrpChat(ChatUser initSeq){
 			if(strcmp(msg.IncomingMessage,"JOIN") == 0)
 				newMessage="Succeeded, current users:\0";	
 			else
-				newMessage="Sorry :(\0";
+				newMessage=msg.IncomingMessage;
 			
 			strcpy(msg.IncomingMessage, newMessage.c_str());
 			for(int i=0;i<clientListCtr;i++)
 			{
-			
 		    if (sendto(sock, &msg, sizeof(struct Message), 0 , (struct sockaddr *) &clientList[i], slen)==-1) {
               error("sendto()");
             }
-			}
-		 	 
 		}
+		 	 
+	}
 
     return;
 }
-
-void add_socket(int sock){
-	
-	sockfds[sockcount]=sock;
-	t++;
-}
-
 string getIP()	{
 	
 	struct ifaddrs * ifAddrStruct=NULL;
@@ -217,9 +183,7 @@ string getIP()	{
             tmpAddrPtr=&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
             char addressBuffer[INET6_ADDRSTRLEN];
             inet_ntop(AF_INET6, tmpAddrPtr, addressBuffer, INET6_ADDRSTRLEN);
-            //printf("reddy \n");
-            //printf("%s IP Address %s\n", ifa->ifa_name, addressBuffer); 
-        } 
+		} 
     }
     if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
     return ip;
