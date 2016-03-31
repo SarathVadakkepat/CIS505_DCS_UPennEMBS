@@ -31,6 +31,22 @@ struct Message
 int sockfds[20]={};
 int sockcount=0;
 
+
+//Variables if a client
+ struct sockaddr_in newUser_si_other;
+ int newUser_s, newUser_i;
+ socklen_t newUser_slen=sizeof(newUser_si_other);
+
+
+void *receiver_handler(void *);
+void *sender_handler(void *);
+sockaddr_in clientList[10]; int clientListCtr=0;
+
+
+
+
+
+
 //Class for users in a group chat
 class ChatUser
 {
@@ -64,47 +80,40 @@ void existGrpChat(ChatUser newUser){
 		 cout<<newUser.name<<" joining a new chat on "<<newUser.seqIpAddr<<":"<<newUser.leaderPortNum<<", listening on "<<newUser.ipAddr<<":"<<newUser.portNumber<<endl;
 
 
-		 struct sockaddr_in si_other;
-  	     int s, i;
-		 socklen_t slen=sizeof(si_other);
-  
-    	 if ( (s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
+ if ( (newUser_s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
         	error("socket");
     	 }
  
-    	memset((char *) &si_other, 0, sizeof(si_other));
-    	si_other.sin_family = AF_INET;
-    	si_other.sin_port = htons(newUser.leaderPortNum);
+    	memset((char *) &newUser_si_other, 0, sizeof(newUser_si_other));
+    	newUser_si_other.sin_family = AF_INET;
+    	newUser_si_other.sin_port = htons(newUser.leaderPortNum);
      
-    	if (inet_aton(newUser.seqIpAddr.c_str(), &si_other.sin_addr) == 0)  {
+    	if (inet_aton(newUser.seqIpAddr.c_str(), &newUser_si_other.sin_addr) == 0)  {
         fprintf(stderr, "inet_aton() failed\n");
         exit(1);
 		}
-		
-		add_socket(s);
-
+	
+		strcpy(msg.IncomingMessage, "JOIN");
+		if (sendto(newUser_s, &msg, sizeof(struct Message), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
+           error("sendto()");
+        }
+        
+        
 		 /* if( inet_pton( AF_INET, newUser.seqIpAddr, &si_other.sin_addr ) <= 0 ) {
 		  perror( "inet_pton for address" );
 		  exit( 99 );
    	 	 }*/
 		 		
-		while(1){	
-				
-		//cout<<"Enter message"<<endl;
-		//string m="";	
-		//getline(cin,m);
-		strcpy(msg.IncomingMessage, "JOIN");	
-					
-		if (sendto(s, &msg, sizeof(struct Message), 0 , (struct sockaddr *) &si_other, slen)==-1) {
-           error("sendto()");
-        }
-				
-		if (recvfrom(s, &msg, sizeof(struct Message), 0, (struct sockaddr *) &si_other, &slen) == -1) {
-          error("recvfrom()");
-    	}
-	    cout <<msg.IncomingMessage<< endl;
-						
+		//TODO : Remove the junk field and figure to pass null
+		 int junk=0;
+		pthread_t thread_id;
+		pthread_create( &thread_id , NULL ,  receiver_handler,(void*) &junk);
+		pthread_create( &thread_id , NULL ,  sender_handler,(void*) &junk);
+		 
+		 //Replace while with thread join
+		while(1){
 		}
+	
 
 }
 
@@ -141,6 +150,16 @@ void newGrpChat(ChatUser initSeq){
             if ((recv_len = recvfrom(sock, &msg, sizeof(struct Message), 0, (struct sockaddr *) &si_other, &slen)) == -1) {
               error("recvfrom()");
        	 	}
+		
+		//Logic to add unique client data to array.
+			bool isExisting=false;
+			for(int i=0;i<clientListCtr;i++)
+				if((int)ntohs(si_other.sin_port)==(int)ntohs(clientList[i].sin_port)) isExisting=true;
+			
+			if(!isExisting)	clientList[clientListCtr++]=si_other;
+			//End Logic
+				
+		
 			 
 		    cout << msg.IncomingMessage << endl; 
 			string tmp(msg.IncomingMessage);
@@ -151,10 +170,12 @@ void newGrpChat(ChatUser initSeq){
 				newMessage="Sorry :(\0";
 			
 			strcpy(msg.IncomingMessage, newMessage.c_str());
-			for(int i=0;i<sizeof(sockfds)/4;i++){
-		    if (sendto(sockfds[i], &msg, sizeof(struct Message), 0 , (struct sockaddr *) &si_other, slen)==-1) {
+			for(int i=0;i<clientListCtr;i++)
+			{
+			
+		    if (sendto(sock, &msg, sizeof(struct Message), 0 , (struct sockaddr *) &clientList[i], slen)==-1) {
               error("sendto()");
-				}
+            }
 			}
 		 	 
 		}
@@ -259,4 +280,28 @@ int main(int argc, char* argv[]){
 	 }
 
 	 
+}
+
+void *receiver_handler(void *socket_desc)
+{
+	while(1){
+	if (recvfrom(newUser_s, &msg, sizeof(struct Message), 0, (struct sockaddr *) &newUser_si_other, &newUser_slen) == -1) {
+          error("recvfrom()");
+    	}
+	    cout << "The message was = " << msg.IncomingMessage<< endl;
+	}
+}
+
+
+void *sender_handler(void *socket_desc)
+{
+	while(1){
+		string m="";	
+		getline(cin,m);
+		strcpy(msg.IncomingMessage, m.c_str());	
+		
+	    if (sendto(newUser_s, &msg, sizeof(struct Message), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
+           error("sendto()");
+        }
+	}
 }
