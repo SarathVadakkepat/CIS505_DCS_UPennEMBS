@@ -34,8 +34,9 @@ public:
 	   //MsgType msgType;
 	   //sendInfo srcInfo;
 	   //sendInfo dstInfo;
-	   string mess;
+	   char mess[1024];
 	   string name;
+	
 	   //string sendTimeStamp;
 	   //string recvTimeStamp;
 };
@@ -97,8 +98,13 @@ void existGrpChat(ChatUser newUser){
         exit(1);
 		}
 	
-		msg.newmsg.mess = "JOIN";
-		if (sendto(newUser_s, &msg, sizeof(struct Messageobj), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
+		Message newMessage;
+		strcpy(newMessage.mess ,"JOIN");
+	
+		struct Messageobj newMessageObj;
+		newMessageObj.newmsg=newMessage;
+	
+	    if (sendto(newUser_s, &newMessageObj, sizeof(struct Messageobj), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
            error("sendto()");
         }
 		 		
@@ -145,7 +151,8 @@ void newGrpChat(ChatUser initSeq){
     	while(1)
     	{
 			struct Messageobj mess1;
-            if ((recv_len = recvfrom(sock, &mess1, sizeof(struct Messageobj), 0, (struct sockaddr *) &si_other, &slen)) == -1) {
+            
+			if ((recv_len = recvfrom(sock, &mess1, sizeof(struct Messageobj), 0, (struct sockaddr *) &si_other, &slen)) == -1) {
               error("recvfrom()");
        	 	}
 		
@@ -159,16 +166,29 @@ void newGrpChat(ChatUser initSeq){
 			 
 		    cout << mess1.newmsg.mess << endl; 
 			//string tmp(mess1.newmsg.mess);
+			
+			string newMessageArrived(mess1.newmsg.mess);
 			string newMessage;
-			if(mess1.newmsg.mess == "JOIN")
+			
+			if(newMessageArrived == "JOIN")
 				newMessage="Succeeded, current users:\0";	
 			else
-				newMessage=mess1.newmsg.mess;
+				newMessage=newMessageArrived;
 			
-			mess1.newmsg.mess = newMessage;
+			
+			Message newMessageMultiCast;
+			strcpy(newMessageMultiCast.mess ,newMessage.c_str());
+	
+			struct Messageobj newMessageObjMultiCast;
+			newMessageObjMultiCast.newmsg=newMessageMultiCast;
+			
+			
+			//mess1.newmsg.mess = newMessage;
+			
+			
 			for(int i=0;i<clientListCtr;i++)
 			{
-		    if (sendto(sock, &mess1, sizeof(struct Messageobj), 0 , (struct sockaddr *) &clientList[i], slen)==-1) {
+		    if (sendto(sock, &newMessageObjMultiCast, sizeof(struct Messageobj), 0 , (struct sockaddr *) &clientList[i], slen)==-1) {
               error("sendto()");
             }
 		}
@@ -281,8 +301,7 @@ void *receiver_handler(void *socket_desc)
 void *sender_handler(void *socket_desc)
 {
 	while(1){
-		Message msgg;
-		struct Messageobj newmess;
+		
 		string m="";	
 		char send[2048];
 		strcpy(send, client_name);
@@ -290,8 +309,20 @@ void *sender_handler(void *socket_desc)
 		getline(cin,m);
 		strcat(send, m.c_str());
 		//newmess.newmsg.mess= send;	
-		msgg.mess = send;
-		newmess.newmsg = msgg;
+		
+		Message msgg;
+		strcpy(msgg.mess, send);
+		
+		struct Messageobj newmess;
+		newmess.newmsg=msgg;
+		
+		
+		
+		
+		
+		
+		
+		
 	    if (sendto(newUser_s, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
            error("sendto()");
         }
