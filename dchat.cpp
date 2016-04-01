@@ -21,27 +21,16 @@ Authors: Karthik Anantha Ram, Sanjeet Phatak, Sarath Vadakkepat
 
 using namespace std;
 
-/*struct Message                                                           
-  { 
-    char IncomingMessage[2048];
-	char name[50];
 
-  }msg;
-*/
 class Message
 {
 public:
-	   //MsgType msgType;
-	   //sendInfo srcInfo;
-	   //sendInfo dstInfo;
 	   char mess[1024];
-	   string name;
-	
-	   //string sendTimeStamp;
-	   //string recvTimeStamp;
+	   char name[100];
+	   char ip[100];
 };
 
-
+string welcome_mess;
 struct Messageobj
 {
  	Message newmsg;	
@@ -82,7 +71,7 @@ void error(const char *msg)
 //Method to enable a user join a existing chat
 void existGrpChat(ChatUser newUser){
 		 
-		 cout<<newUser.name<<" joining a new chat on "<<newUser.seqIpAddr<<":"<<newUser.leaderPortNum<<", listening on "<<newUser.ipAddr<<":"<<newUser.portNumber<<endl;
+		cout<<newUser.name<<" joining a new chat on "<<newUser.seqIpAddr<<":"<<newUser.leaderPortNum<<", listening on "<<newUser.ipAddr<<":"<<newUser.portNumber<<endl;
 		strcpy(client_name, newUser.name.c_str());
 
  if ( (newUser_s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
@@ -100,7 +89,9 @@ void existGrpChat(ChatUser newUser){
 	
 		Message newMessage;
 		strcpy(newMessage.mess ,"JOIN");
-	
+		strcpy(newMessage.name, newUser.name.c_str());
+		strcpy(newMessage.ip, newUser.ipAddr.c_str());
+		
 		struct Messageobj newMessageObj;
 		newMessageObj.newmsg=newMessage;
 	
@@ -111,8 +102,8 @@ void existGrpChat(ChatUser newUser){
 		//TODO : Remove the junk field and figure to pass null
 		int junk=0;
 		pthread_t thread_1,thread_2;
-		pthread_create( &thread_1 , NULL ,  receiver_handler,(void*) &junk);
-		pthread_create( &thread_2, NULL ,  sender_handler,(void*) &junk);
+		pthread_create( &thread_1 , NULL , receiver_handler,(void*) 0);
+		pthread_create( &thread_2, NULL , sender_handler,(void*) 0);
 		pthread_join(thread_1,NULL);
 		pthread_join(thread_2,NULL);
 		 //Replace while with thread join
@@ -126,6 +117,14 @@ void newGrpChat(ChatUser initSeq){
 		cout<<initSeq.name<<" started a new chat, listening on "<<initSeq.ipAddr<<":"<<initSeq.portNumber<<endl;
 	 	cout<<"Succeeded, current users:"<<endl;
 		cout<<initSeq.name<<" "<<initSeq.ipAddr<<"."<<initSeq.portNumber<<" (Leader)"<<endl;
+		
+		char samp[20];
+		
+		sprintf(samp, "%d", initSeq.portNumber);
+		string sam(samp);
+		
+		welcome_mess = initSeq.name + " " + initSeq.ipAddr + ":" + sam + "(Leader)" + "\n"; 
+		
 		cout<<"Waiting for others to join..."<<endl;
 		 	 
 		struct sockaddr_in si_me, si_other;
@@ -171,20 +170,22 @@ void newGrpChat(ChatUser initSeq){
 			string newMessage;
 			
 			if(newMessageArrived == "JOIN")
-				newMessage="Succeeded, current users:\0";	
+				{
+					newMessage="Succeeded, current users:\n";	
+					string name1(mess1.newmsg.name);
+					string ip1(mess1.newmsg.ip);
+					newMessage += welcome_mess;
+					newMessage += name1 + " " + ip1 + "\n";
+				}
 			else
-				newMessage=newMessageArrived;
+					newMessage=newMessageArrived;
 			
 			
 			Message newMessageMultiCast;
 			strcpy(newMessageMultiCast.mess ,newMessage.c_str());
 	
 			struct Messageobj newMessageObjMultiCast;
-			newMessageObjMultiCast.newmsg=newMessageMultiCast;
-			
-			
-			//mess1.newmsg.mess = newMessage;
-			
+			newMessageObjMultiCast.newmsg=newMessageMultiCast;			
 			
 			for(int i=0;i<clientListCtr;i++)
 			{
@@ -192,7 +193,6 @@ void newGrpChat(ChatUser initSeq){
               error("sendto()");
             }
 		}
-		 	 
 	}
 
     return;
@@ -287,7 +287,7 @@ int main(int argc, char* argv[]){
 	 
 }
 
-void *receiver_handler(void *socket_desc)
+void *receiver_handler(void *)
 {
 	while(1){
 	if (recvfrom(newUser_s, &msg, sizeof(struct Messageobj), 0, (struct sockaddr *) &newUser_si_other, &newUser_slen) == -1) {
@@ -298,17 +298,16 @@ void *receiver_handler(void *socket_desc)
 }
 
 
-void *sender_handler(void *socket_desc)
+void *sender_handler(void *)
 {
 	while(1){
 		
 		string m="";	
 		char send[2048];
 		strcpy(send, client_name);
-		strcat(send,": ");
+		strcat(send,":: ");
 		getline(cin,m);
 		strcat(send, m.c_str());
-		//newmess.newmsg.mess= send;	
 		
 		Message msgg;
 		strcpy(msgg.mess, send);
@@ -316,15 +315,9 @@ void *sender_handler(void *socket_desc)
 		struct Messageobj newmess;
 		newmess.newmsg=msgg;
 		
-		
-		
-		
-		
-		
-		
-		
 	    if (sendto(newUser_s, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
            error("sendto()");
         }
 	}
 }
+
