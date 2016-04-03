@@ -53,6 +53,8 @@ struct Messageobj mess1;
  socklen_t newUser_slen=sizeof(newUser_si_other);
 socklen_t slen;
 
+int lifecheck;
+
 class ChatUser
 {
 public:
@@ -90,8 +92,9 @@ void *seq_mess_sender_handler(void *);
 void *printMessages(Messageobj newMessage);
 void *addToMultiCastDS(Messageobj newIncomingMessage, sockaddr_in si_other);
 void *multicast(Messageobj newMessage);
+void *removefrommulticast(int client_remove);
 string ToString(int val);
-
+int check=0;
 sockaddr_in clientList[10]; 
 int clientListCtr=0;
 
@@ -179,9 +182,11 @@ void existGrpChat(ChatUser newUser){
 		pthread_create( &thread_2, NULL , sender_handler,(void*) 0);
 		pthread_join(thread_1,NULL);
 		pthread_join(thread_2,NULL);
+		cout<<"Hi"<<endl;
 		 //Replace while with thread join
-		while(1){
-		}
+		while(check==1){
+		return;		
+	}
 }
 
 //Method to initiate sequencer
@@ -280,8 +285,8 @@ int main(int argc, char* argv[]){
 		 initSeq.seqIpAddr=initSeq.ipAddr;
 		 initSeq.UIRI++;
 	 	    
-	  	 initSeq.seqIpAddr="192.168.0.116";
-		 initSeq.ipAddr="192.168.0.116";
+	  	 initSeq.seqIpAddr="10.0.0.138";
+		 initSeq.ipAddr="10.0.0.138";
 	 	 
 	 newGrpChat(initSeq);
 	
@@ -311,10 +316,11 @@ int main(int argc, char* argv[]){
     		cnt++;
 		 }
 
-		  newUser.seqIpAddr="192.168.0.116";
-		 newUser.ipAddr="192.168.0.116";
+		  newUser.seqIpAddr="10.0.0.138";
+		 newUser.ipAddr="10.0.0.138";
 		 
 		 existGrpChat(newUser);
+		return 0;
     }
 		 
 		  
@@ -346,7 +352,7 @@ void *receiver_handler(void *)
 	struct Messageobj newIncomingMessage; 
 	while(1){
 	if (recvfrom(newUser_s, &newIncomingMessage, sizeof(struct Messageobj), 0, (struct sockaddr *) &newUser_si_other, &newUser_slen) == -1) {
-          error("recvfrom()");
+		error("recvfrom()");
     	}
 	    printMessages(newIncomingMessage);
 		
@@ -392,6 +398,19 @@ void *sender_handler(void *)
 		string m="";	
 		char send[1024];
 		getline(cin,m);
+		if(cin.eof()==1){
+			Message msgg;
+			strcpy(send, "group_leave");
+			cout<<send<<endl;
+			strcpy(msgg.mess, send);
+			check=1;
+			struct Messageobj newmess;
+			newmess.newmsg=msgg;
+			if (sendto(newUser_s, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
+         			  error("sendto()");
+        		}
+			exit(0);
+		}
 		strcpy(send, m.c_str());
 		
 		Message msgg;
@@ -504,6 +523,31 @@ void *multicast(Messageobj newMessage) {
 		
 }
 
+void *removefrommulticast(int client_remove){
+	int t=0;
+	for(int i=0;i<clientListCtr;i++){
+		if((int)ntohs(clientList[i].sin_port)==client_remove){
+			clientList[i]=clientList[i+1];	
+			t=1;
+		}
+		else if(t==1){
+			clientList[i]=clientList[i+1];	
+		}
+	}
+	clientListCtr--;
+	t=0;
+	for(int i=0;i<usersInGroupCtr;i++){
+		if(usersInGroup[i].port==client_remove){
+			usersInGroup[i]=usersInGroup[i+1];	
+			t=1;
+		}
+		else if(t==1){
+			usersInGroup[i]=usersInGroup[i+1];	
+		}
+	}
+	usersInGroupCtr--;
+ }
+
 void *seq_receiver_handler(void *)
 {
 	struct Messageobj newIncomingMessage; 
@@ -531,13 +575,18 @@ void *seq_receiver_handler(void *)
 					}
 			
 			        addToMultiCastDS(newIncomingMessage, si_other);
+				printMessages(newIncomingMessage);
 			         
 					
 				}
-		
+		else if(newMessageArrived == "group_leave"){
+			int clientid = (int)ntohs(si_other.sin_port);
+			removefrommulticast(clientid);		
+		}
+		else{
 		printMessages(newIncomingMessage);
 		multicast(newIncomingMessage);
-			
+		}	
 	   
 		
 	}
