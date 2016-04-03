@@ -67,6 +67,8 @@ public:
 		string seqIpAddr;
 };
 
+ChatUser initSeq;
+ChatUser newUser;
 //struct Userobj
 //{
  //	ChatUser newUsr;	
@@ -276,7 +278,6 @@ int main(int argc, char* argv[]){
  if(argc==2)
 	 {
 		 
-		 ChatUser initSeq;
 		 initSeq.isSequencer=true;
 		 initSeq.ipAddr=getIP();
 		 initSeq.portNumber=5000;
@@ -285,21 +286,20 @@ int main(int argc, char* argv[]){
 		 initSeq.seqIpAddr=initSeq.ipAddr;
 		 initSeq.UIRI++;
 	 	    
-	  	 initSeq.seqIpAddr="10.0.0.138";
-		 initSeq.ipAddr="10.0.0.138";
+	  	 //initSeq.seqIpAddr="10.0.0.138";
+		 //initSeq.ipAddr="10.0.0.138";
 	 	 
 	 newGrpChat(initSeq);
 	
  }
 	 else if(argc==3)
 	 {
-		 ChatUser newUser;
+		 //ChatUser newUser;
 		 newUser.isSequencer=false;
 		 newUser.ipAddr=getIP();
-		// newUser.portNumber=1023+rand()%1000;
+		 newUser.portNumber=1023+rand()%1000;
 		 newUser.name=argv[1];
 		 newUser.UIRI++;
-
 		 string ipPort=argv[2];
 		 istringstream iss(ipPort);
 		 string token;
@@ -316,8 +316,8 @@ int main(int argc, char* argv[]){
     		cnt++;
 		 }
 
-		  newUser.seqIpAddr="10.0.0.138";
-		 newUser.ipAddr="10.0.0.138";
+		  //newUser.seqIpAddr="10.0.0.138";
+		 //newUser.ipAddr="10.0.0.138";
 		 
 		 existGrpChat(newUser);
 		return 0;
@@ -381,7 +381,7 @@ void *seq_mess_sender_handler(void *)
 		
 		struct Messageobj newmess;
 		newmess.newmsg=msgg;
-		
+		cout<<initSeq.name<<":"<<newmess.newmsg.mess<<endl;
 	    for(int i=0;i<clientListCtr;i++){
 	    if (sendto(sock, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &clientList[i], newUser_slen)==-1) {
            error("sendto()");
@@ -399,19 +399,11 @@ void *sender_handler(void *)
 		char send[1024];
 		getline(cin,m);
 		if(cin.eof()==1){
-			Message msgg;
 			strcpy(send, "group_leave");
-			cout<<send<<endl;
-			strcpy(msgg.mess, send);
 			check=1;
-			struct Messageobj newmess;
-			newmess.newmsg=msgg;
-			if (sendto(newUser_s, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
-         			  error("sendto()");
-        		}
-			exit(0);
 		}
-		strcpy(send, m.c_str());
+		else
+			strcpy(send, m.c_str());
 		
 		Message msgg;
 		msgg.messageType=DATA;
@@ -424,6 +416,9 @@ void *sender_handler(void *)
 	    if (sendto(newUser_s, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
            error("sendto()");
         }
+
+        if(check==1)
+        	exit(0);
 	}
 }
 
@@ -513,7 +508,7 @@ string ToString(int val)
 	
 }
 void *multicast(Messageobj newMessage) {
-	
+		
 		for(int i=0;i<clientListCtr;i++){
 			
 	    if (sendto(sock, &newMessage, sizeof(struct Messageobj), 0 , (struct sockaddr *) &clientList[i], slen)==-1) {
