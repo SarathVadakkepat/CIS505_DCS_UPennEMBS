@@ -36,7 +36,7 @@ public:
 	   int port;
 };
 
-struct sockaddr_in si_me, si_other;
+struct sockaddr_in si_me, si_other,si_user;
 
 string welcome_mess;
 struct Messageobj
@@ -128,12 +128,22 @@ void existGrpChat(ChatUser newUser){
     	memset((char *) &newUser_si_other, 0, sizeof(newUser_si_other));
     	newUser_si_other.sin_family = AF_INET;
     	newUser_si_other.sin_port = htons(newUser.leaderPortNum);
-     
+     	
+    	memset((char *) &si_user, 0, sizeof(si_user));
+    	si_user.sin_family = AF_INET;
+    	si_user.sin_port = htons(newUser.portNumber);
+    	si_user.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    	if( bind(newUser_s , (struct sockaddr*)&si_user, sizeof(si_user) ) == -1) {
+        	error("bind");
+    	}
+
     	if (inet_aton(newUser.seqIpAddr.c_str(), &newUser_si_other.sin_addr) == 0)  {
         fprintf(stderr, "inet_aton() failed\n");
         exit(1);
 		}
-	
+		
+
 		Message newMessage;
 		strcpy(newMessage.mess ,"JOIN");
 		strcpy(newMessage.name, newUser.name.c_str());
@@ -355,13 +365,8 @@ void *receiver_handler(void *)
 		error("recvfrom()");
     	}
 	    printMessages(newIncomingMessage);
-		
-		
-		
+			
 	}
-	
-	
-	
 }
 
 void *seq_mess_sender_handler(void *)
@@ -569,7 +574,7 @@ void *seq_receiver_handler(void *)
           				 error("sendto()");
 					}
 			
-			        addToMultiCastDS(newIncomingMessage, si_other);
+			    addToMultiCastDS(newIncomingMessage, si_other);
 				printMessages(newIncomingMessage);
 			         
 					
