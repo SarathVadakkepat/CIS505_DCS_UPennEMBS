@@ -156,6 +156,14 @@ void existGrpChat(ChatUser newUser){
     	si_user.sin_port = htons(newUser.portNumber);
     	si_user.sin_addr.s_addr = htonl(INADDR_ANY);
 
+    	struct timeval tv;
+		tv.tv_sec       = 1;
+		tv.tv_usec      = 1000;
+		
+		if (setsockopt(newUser_s, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
+    	perror("Error");
+		}
+
     	if( bind(newUser_s , (struct sockaddr*)&si_user, sizeof(si_user) ) == -1) {
         	error("bind");
     	}
@@ -184,10 +192,17 @@ void existGrpChat(ChatUser newUser){
 		struct Messageobj newIncomingMessage; 
 		//Receiving Welcome Message
 	 	if (recvfrom(newUser_s, &newIncomingMessage, sizeof(struct Messageobj), 0, (struct sockaddr *) &newUser_si_other, &newUser_slen) == -1) {
-          error("recvfrom()");
-    			}
+          	cout<<"Sorry, no chat is active on "<<newUser.seqIpAddr<<":"<<newUser.leaderPortNum<<" try again later.Bye."<<endl;
+	 		exit(-1);
+    	}
 	
-	
+		tv.tv_sec       = 0;
+		tv.tv_usec      = 0;
+		
+		if (setsockopt(newUser_s, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
+    	perror("Error");
+		}
+
 	     if(strcmp(newIncomingMessage.newmsg.mess,"INDIRECT")==0)
 			{
 				string leadIP(newIncomingMessage.newmsg.ip);
@@ -335,8 +350,8 @@ int main(int argc, char* argv[]){
 		 initSeq.seqIpAddr=initSeq.ipAddr;
 		 initSeq.UIRI++;
 	 	  
-	  	 initSeq.seqIpAddr="130.91.141.49";
-		 initSeq.ipAddr="130.91.141.49";
+	  	 //initSeq.seqIpAddr="130.91.141.49";
+		 //initSeq.ipAddr="130.91.141.49";
 	 	 
 	 newGrpChat(initSeq);
 	
@@ -365,8 +380,8 @@ int main(int argc, char* argv[]){
     		cnt++;
 		 }
 
-		  newUser.seqIpAddr="130.91.141.49";
-		  newUser.ipAddr="130.91.141.49";
+		  //newUser.seqIpAddr="130.91.141.49";
+		  //newUser.ipAddr="130.91.141.49";
 		 
 		 existGrpChat(newUser);
 		 return 0;
