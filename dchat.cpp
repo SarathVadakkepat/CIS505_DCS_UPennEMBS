@@ -18,6 +18,7 @@ Authors: Karthik Anantha Ram, Sanjeet Phatak, Sarath Vadakkepat
 #include <sys/types.h>
 #include <ifaddrs.h>
 #include <sstream>
+#include <time.h>
 
 #define NOTIFICATION 1
 #define DATA 2
@@ -36,9 +37,26 @@ public:
 	   int port;
 };
 
-struct sockaddr_in si_me, si_other,si_user;
+//Variables if a client
+ struct sockaddr_in newUser_si_other;
+ int newUser_s, newUser_i;
+ socklen_t newUser_slen=sizeof(newUser_si_other);
+socklen_t slen;
+
+struct sockaddr_in si_me, si_other;
+
+//Variables for sequencer
+
+//Variables for client_Bind
+struct sockaddr_in si_user;
+socklen_t newJoinUser_slen=sizeof(si_user);
+
+
+
+
 
 string welcome_mess;
+
 struct Messageobj
 {
  	Message newmsg;	
@@ -47,11 +65,8 @@ struct Messageobj
 struct Messageobj mess1;
 
  char client_name[50];
-//Variables if a client
- struct sockaddr_in newUser_si_other;
- int newUser_s, newUser_i;
- socklen_t newUser_slen=sizeof(newUser_si_other);
-socklen_t slen;
+
+
 
 int lifecheck;
 
@@ -95,6 +110,10 @@ void *printMessages(Messageobj newMessage);
 void *addToMultiCastDS(Messageobj newIncomingMessage, sockaddr_in si_other);
 void *multicast(Messageobj newMessage);
 void *removefrommulticast(int client_remove);
+void *seq_indirect_joining_handler(void *);
+
+
+
 string ToString(int val);
 int check=0;
 sockaddr_in clientList[10]; 
@@ -102,7 +121,11 @@ int clientListCtr=0;
 
 //Class for users in a group chat
 
-
+struct NewJoin
+{
+	Messageobj newmsg;	
+	struct sockaddr_in newJ;
+};
 
 
 
@@ -118,7 +141,6 @@ void error(const char *msg)
 void existGrpChat(ChatUser newUser){
 		 
 	    
-		cout<<newUser.name<<" joining a new chat on "<<newUser.seqIpAddr<<":"<<newUser.leaderPortNum<<", listening on "<<newUser.ipAddr<<":"<<newUser.portNumber<<endl;
 		strcpy(client_name, newUser.name.c_str());
 
  		if ( (newUser_s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
@@ -164,8 +186,21 @@ void existGrpChat(ChatUser newUser){
 	 	if (recvfrom(newUser_s, &newIncomingMessage, sizeof(struct Messageobj), 0, (struct sockaddr *) &newUser_si_other, &newUser_slen) == -1) {
           error("recvfrom()");
     			}
-	 	printMessages(newIncomingMessage);
 	
+	
+	     if(strcmp(newIncomingMessage.newmsg.mess,"INDIRECT")==0)
+			{
+				string leadIP(newIncomingMessage.newmsg.ip);
+				newUser.seqIpAddr=leadIP;
+    			newUser.leaderPortNum= newIncomingMessage.newmsg.port;
+    			close(newUser_s);
+				existGrpChat(newUser);
+			}
+			else 
+			{
+				cout<<newUser.name<<" joining a new chat on "<<newUser.seqIpAddr<<":"<<newUser.leaderPortNum<<", listening on "<<newUser.ipAddr<<":"<<newUser.portNumber<<endl;
+				printMessages(newIncomingMessage);
+			}
 	
 		//Receiving number of users
 	    char userCount[32];
@@ -189,13 +224,16 @@ void existGrpChat(ChatUser newUser){
 		}
 	
 	
-		pthread_t thread_1,thread_2;
+		pthread_t thread_1,thread_2, thread_3;
 		pthread_create( &thread_1 , NULL , receiver_handler,(void*) 0);
 		pthread_create( &thread_2, NULL , sender_handler,(void*) 0);
+		//pthread_create( &thread_3, NULL , receiver_handler_newJoin,(void*) 0);
+	
 		pthread_join(thread_1,NULL);
 		pthread_join(thread_2,NULL);
-		cout<<"Hi"<<endl;
-		 //Replace while with thread join
+		//pthread_join(thread_3,NULL);
+	
+		//Replace while with thread join
 		while(check==1){
 		return;		
 	}
@@ -238,13 +276,14 @@ void newGrpChat(ChatUser initSeq){
     	}
 
 
-    	pthread_t thread_1,thread_2,thread_3;
+    	pthread_t thread_1,thread_2,thread_3,thread_4;
 		pthread_create( &thread_1, NULL , seq_receiver_handler,(void*) 0);
 		pthread_create( &thread_3, NULL , seq_mess_sender_handler,(void*) 0);
-
+		//pthread_create( &thread_4, NULL , seq_indirect_joining_handler,(void*) 0);
+		
 		pthread_join(thread_1,NULL);
 		pthread_join(thread_3,NULL);
-	
+		//pthread_join(thread_4,NULL);
 
     return;
 }
@@ -285,9 +324,9 @@ string getIP()	{
 
 int main(int argc, char* argv[]){
  
+	srand(time(NULL));
  if(argc==2)
 	 {
-		 
 		 initSeq.isSequencer=true;
 		 initSeq.ipAddr=getIP();
 		 initSeq.portNumber=5000;
@@ -295,9 +334,9 @@ int main(int argc, char* argv[]){
 		 initSeq.leaderPortNum=initSeq.portNumber;
 		 initSeq.seqIpAddr=initSeq.ipAddr;
 		 initSeq.UIRI++;
-	 	    
-	  	 //initSeq.seqIpAddr="10.0.0.138";
-		 //initSeq.ipAddr="10.0.0.138";
+	 	  
+	  	 initSeq.seqIpAddr="130.91.141.49";
+		 initSeq.ipAddr="130.91.141.49";
 	 	 
 	 newGrpChat(initSeq);
 	
@@ -326,11 +365,11 @@ int main(int argc, char* argv[]){
     		cnt++;
 		 }
 
-		  //newUser.seqIpAddr="10.0.0.138";
-		 //newUser.ipAddr="10.0.0.138";
+		  newUser.seqIpAddr="130.91.141.49";
+		  newUser.ipAddr="130.91.141.49";
 		 
 		 existGrpChat(newUser);
-		return 0;
+		 return 0;
     }
 		 
 		  
@@ -364,10 +403,39 @@ void *receiver_handler(void *)
 	if (recvfrom(newUser_s, &newIncomingMessage, sizeof(struct Messageobj), 0, (struct sockaddr *) &newUser_si_other, &newUser_slen) == -1) {
 		error("recvfrom()");
     	}
-	    printMessages(newIncomingMessage);
+		
+		string newMessageArrived(newIncomingMessage.newmsg.mess);
+		string newMessage;
+		Message msgg;
+		if(newMessageArrived == "JOIN")
+			{
+			  cout<<"New User Trying to join"<<endl;
+			   
+			Message giveSEQIPData;
 			
+			
+			strcpy(giveSEQIPData.mess, "INDIRECT");
+			strcpy(giveSEQIPData.ip, newUser.seqIpAddr.c_str());
+			giveSEQIPData.port=newUser.leaderPortNum;
+			giveSEQIPData.messageType=INTERNAL;
+				   
+			int leaderPortNum;
+			string seqIpAddr;
+				   
+			struct Messageobj newmess;
+			newmess.newmsg=giveSEQIPData;
+				   
+			if (sendto(newUser_s, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
+       		    error("sendto()");
+      		  }
+			cout<<"request forwarded to seq"<<endl;
+			
+		}
+		
+		else printMessages(newIncomingMessage);
 	}
 }
+
 
 void *seq_mess_sender_handler(void *)
 {
@@ -375,10 +443,8 @@ void *seq_mess_sender_handler(void *)
 		
 		string m="";	
 		char send[1024];
-	
 		getline(cin,m);
 		strcpy(send, m.c_str());
-		
 		Message msgg;
 		msgg.messageType=DATA;
 		strcpy(msgg.mess, send);
@@ -456,10 +522,9 @@ void *addToMultiCastDS(Messageobj newMessage, sockaddr_in si_other)
 			clientListCtr++;
 		}
 	
-	
 		strcpy(usersInGroup[usersInGroupCtr].name, newMessage.newmsg.name);
 		strcpy(usersInGroup[usersInGroupCtr].ip, newMessage.newmsg.ip);
-	     usersInGroup[usersInGroupCtr].port= newMessage.newmsg.port;
+	    usersInGroup[usersInGroupCtr].port= newMessage.newmsg.port;
 	    usersInGroup[usersInGroupCtr].UIRI= (int)ntohs(si_other.sin_port);
 	    usersInGroupCtr++;
 	    
@@ -493,12 +558,7 @@ void *addToMultiCastDS(Messageobj newMessage, sockaddr_in si_other)
 			 if (sendto(sock, &existUserList, sizeof(struct Messageobj), 0 , (struct sockaddr *) &si_other, newUser_slen)==-1) {
           		 error("sendto()");
 			}
-			 
 		}
-		
-	    
-	
-	
 }
 
 string ToString(int val)
@@ -591,3 +651,39 @@ void *seq_receiver_handler(void *)
 		
 	}
 }
+
+/*
+
+void *seq_indirect_joining_handler(void *)
+{
+	struct NewJoin newIncomingJoin; 
+	while(1){
+		int recv_len;
+	if ((recv_len = recvfrom(sock, &newIncomingJoin, sizeof(struct NewJoin), 0, (struct sockaddr *) &si_other, &slen)) == -1) {
+              error("recvfrom()");
+       	 	}
+	cout<<"New join request forwarded from client..ALOHA " <<endl;
+		
+		socklen_t newJSlen;
+		newJSlen=sizeof(newIncomingJoin.newJ);
+		
+		string newMessage;
+		Message msgg;
+		newMessage="Succeeded, current users:\n";	
+		newMessage += welcome_mess;
+		strcpy(msgg.mess ,newMessage.c_str());
+				
+		struct Messageobj newmess;
+		newmess.newmsg=msgg;
+		newmess.newmsg.messageType=NOTIFICATION;
+		if (sendto(sock, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &newIncomingJoin.newJ, &newJSlen)==-1) {
+         	 error("sendto()");
+		}
+			
+		addToMultiCastDS(newIncomingJoin.newmsg, si_other);
+		printMessages(newIncomingJoin.newmsg);
+		
+		
+	}
+}
+*/
