@@ -424,7 +424,7 @@ void *receiver_handler(void *)
 		Message msgg;
 		if(newMessageArrived == "JOIN")
 			{
-			  cout<<"New User Trying to join"<<endl;
+			  //cout<<"New User Trying to join"<<endl;
 			   
 			Message giveSEQIPData;
 			
@@ -443,7 +443,7 @@ void *receiver_handler(void *)
 			if (sendto(newUser_s, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
        		    error("sendto()");
       		  }
-			cout<<"request forwarded to seq"<<endl;
+			//cout<<"request forwarded to seq"<<endl;
 			
 		}
 		
