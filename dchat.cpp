@@ -562,8 +562,8 @@ void *addToMultiCastDS(Messageobj newMessage, sockaddr_in si_other)
 	    struct Messageobj existUserList; 
 	    for(int i=0;i<usersInGroupCtr;i++)
 		{
-			 string name(usersInGroup[i].name);
-	    	 string ip(usersInGroup[i].ip);
+			string name(usersInGroup[i].name);
+	    	string ip(usersInGroup[i].ip);
 						
 			string notif="";
 			notif=name+ " "+ip+":"+ToString(usersInGroup[i].port);
@@ -598,7 +598,7 @@ void *multicast(Messageobj newMessage) {
 		
 }
 
-void *removefrommulticast(int client_remove){
+void *removefrommulticast(int client_remove,string name){
 	int t=0;
 	for(int i=0;i<clientListCtr;i++){
 		if((int)ntohs(clientList[i].sin_port)==client_remove){
@@ -621,6 +621,18 @@ void *removefrommulticast(int client_remove){
 		}
 	}
 	usersInGroupCtr--;
+
+		Message newNotice;
+	    newNotice.messageType=NOTIFICATION;
+				
+		string notif_msg="";
+	    notif_msg="NOTICE "+name+" left the chat or crashed ";
+	    strcpy(newNotice.mess ,notif_msg.c_str()); 
+	
+		struct Messageobj newNotifMessage; 
+		newNotifMessage.newmsg=newNotice;
+		printMessages(newNotifMessage);
+	  	multicast(newNotifMessage);
  }
 
 void *seq_receiver_handler(void *)
@@ -634,6 +646,7 @@ void *seq_receiver_handler(void *)
 
 		//Sequencer Welcoming new client
 		string newMessageArrived(newIncomingMessage.newmsg.mess);
+		string user_name=newIncomingMessage.newmsg.name;
 		string newMessage;
 		Message msgg;
 		if(newMessageArrived == "JOIN")
@@ -656,7 +669,7 @@ void *seq_receiver_handler(void *)
 				}
 		else if(newMessageArrived == "group_leave"){
 			int clientid = (int)ntohs(si_other.sin_port);
-			removefrommulticast(clientid);		
+			removefrommulticast(clientid,user_name);		
 		}
 		else{
 		printMessages(newIncomingMessage);
