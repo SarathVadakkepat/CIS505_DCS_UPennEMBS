@@ -19,6 +19,8 @@ Authors: Karthik Anantha Ram, Sanjeet Phatak, Sarath Vadakkepat
 #include <ifaddrs.h>
 #include <sstream>
 #include <time.h>
+#include <queue>
+
 
 #define NOTIFICATION 1
 #define DATA 2
@@ -27,6 +29,12 @@ Authors: Karthik Anantha Ram, Sanjeet Phatak, Sarath Vadakkepat
 using namespace std;
 
 int sock;
+
+unsigned long int seq=0;
+unsigned long int seqChk=1;
+//std::mutex m;
+int seqNext=0;
+
 class Message
 {
 public:
@@ -35,6 +43,7 @@ public:
 	   char name[100];
 	   char ip[100];
 	   int port;
+	   unsigned long int seqNum;
 };
 
 //Variables if a client
@@ -52,9 +61,6 @@ struct sockaddr_in si_user;
 socklen_t newJoinUser_slen=sizeof(si_user);
 
 
-
-
-
 string welcome_mess;
 
 struct Messageobj
@@ -66,7 +72,8 @@ struct Messageobj mess1;
 
  char client_name[50];
 
-
+queue<Messageobj> msgOrder;
+bool recvFlag;
 
 int lifecheck;
 
@@ -84,11 +91,6 @@ public:
 
 ChatUser initSeq;
 ChatUser newUser;
-//struct Userobj
-//{
- //	ChatUser newUsr;	
-//};
-//struct ChatUser usersInGroup[10];
 
 
 struct UserInGroup
@@ -214,6 +216,7 @@ void existGrpChat(ChatUser newUser){
 			else 
 			{
 				cout<<newUser.name<<" joining a new chat on "<<newUser.seqIpAddr<<":"<<newUser.leaderPortNum<<", listening on "<<newUser.ipAddr<<":"<<newUser.portNumber<<endl;
+				seqChk=newIncomingMessage.newmsg.seqNum+1;
 				printMessages(newIncomingMessage);
 			}
 	
@@ -401,7 +404,28 @@ void *printMessages(Messageobj newMessage)
 	
 	if(newMessage.newmsg.messageType==DATA)
 	   {
+	   	   //cout<<"seq "<<newMessage.newmsg.seqNum<<" seqChk "<<seqChk<<endl;
+	   	   
+	   	   if(newMessage.newmsg.seqNum==seqChk){
 		   cout<<newMessage.newmsg.name<<":: "<<newMessage.newmsg.mess<<endl;
+
+		   if(recvFlag){
+	   	   		msgOrder.pop();
+	   	   		recvFlag=false;
+	   	   	}
+		   seqChk=seqChk+1;
+		   }
+		   else
+		   {
+		   	msgOrder.push(newMessage);
+		   }
+
+		   seqNext=msgOrder.front().newmsg.seqNum;
+
+		   if(seqNext==seqChk){
+		   	recvFlag=true;
+		   	printMessages(msgOrder.front());
+		   }
 	   }
 	if(newMessage.newmsg.messageType==NOTIFICATION)
 	   {
@@ -462,12 +486,15 @@ void *seq_mess_sender_handler(void *)
 		strcpy(send, m.c_str());
 		Message msgg;
 		msgg.messageType=DATA;
+		seq=seq+1;
+		msgg.seqNum=seq;
 		strcpy(msgg.mess, send);
 		strcpy(msgg.name, client_name);
 		
 		struct Messageobj newmess;
 		newmess.newmsg=msgg;
-		cout<<initSeq.name<<":"<<newmess.newmsg.mess<<endl;
+		//cout<<initSeq.name<<":"<<newmess.newmsg.mess<<endl;
+		printMessages(newmess);
 	    for(int i=0;i<clientListCtr;i++){
 	    if (sendto(sock, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &clientList[i], newUser_slen)==-1) {
            error("sendto()");
@@ -483,16 +510,19 @@ void *sender_handler(void *)
 		
 		string m="";	
 		char send[1024];
+		Message msgg;
 		getline(cin,m);
 		if(cin.eof()==1){
 			strcpy(send, "group_leave");
+			msgg.messageType=INTERNAL;
 			check=1;
 		}
-		else
+		else{
 			strcpy(send, m.c_str());
+			msgg.messageType=DATA;
+		}
 		
-		Message msgg;
-		msgg.messageType=DATA;
+		
 		strcpy(msgg.mess, send);
 		strcpy(msgg.name, client_name);
 		
@@ -654,7 +684,7 @@ void *seq_receiver_handler(void *)
 					newMessage="Succeeded, current users:\n";	
 					newMessage += welcome_mess;
 					strcpy(msgg.mess ,newMessage.c_str());
-				
+					msgg.seqNum=seq;
 					struct Messageobj newmess;
 			        newmess.newmsg=msgg;
 			        newmess.newmsg.messageType=NOTIFICATION;
@@ -672,6 +702,11 @@ void *seq_receiver_handler(void *)
 			removefrommulticast(clientid,user_name);		
 		}
 		else{
+
+		if(newIncomingMessage.newmsg.messageType==DATA){
+		seq=seq+1;
+		newIncomingMessage.newmsg.seqNum=seq;
+		}
 		printMessages(newIncomingMessage);
 		multicast(newIncomingMessage);
 		}	
