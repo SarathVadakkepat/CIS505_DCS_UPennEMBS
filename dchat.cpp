@@ -20,7 +20,7 @@ Authors: Karthik Anantha Ram, Sanjeet Phatak, Sarath Vadakkepat
 #include <sstream>
 #include <time.h>
 #include <queue>
-
+#include <mutex>
 
 #define NOTIFICATION 1
 #define DATA 2
@@ -34,7 +34,7 @@ unsigned long int seq=0;
 unsigned long int seqChk=1;
 //std::mutex m;
 int seqNext=0;
-
+mutex mPrint;
 class Message
 {
 public:
@@ -73,7 +73,7 @@ struct Messageobj mess1;
  char client_name[50];
 
 queue<Messageobj> msgOrder;
-bool recvFlag;
+//bool recvFlag;
 
 int lifecheck;
 
@@ -108,7 +108,7 @@ void *receiver_handler(void *);
 void *sender_handler(void *);
 void *seq_receiver_handler(void *);
 void *seq_mess_sender_handler(void *);
-void *printMessages(Messageobj newMessage);
+void *printMessages(Messageobj newMessage,bool recvFlag);
 void *addToMultiCastDS(Messageobj newIncomingMessage, sockaddr_in si_other);
 void *multicast(Messageobj newMessage);
 void *removefrommulticast(int client_remove);
@@ -217,7 +217,9 @@ void existGrpChat(ChatUser newUser){
 			{
 				cout<<newUser.name<<" joining a new chat on "<<newUser.seqIpAddr<<":"<<newUser.leaderPortNum<<", listening on "<<newUser.ipAddr<<":"<<newUser.portNumber<<endl;
 				seqChk=newIncomingMessage.newmsg.seqNum+1;
-				printMessages(newIncomingMessage);
+				mPrint.lock();
+				printMessages(newIncomingMessage,false);
+				mPrint.unlock();
 			}
 	
 		//Receiving number of users
@@ -238,7 +240,9 @@ void existGrpChat(ChatUser newUser){
     			}
 			
 			if(strcmp(newIncomingMessage.newmsg.mess, ":"))
-			 printMessages(newIncomingMessage);
+			 mPrint.lock();
+			 printMessages(newIncomingMessage,false);
+			 mPrint.unlock();
 		}
 	
 	
@@ -399,7 +403,7 @@ int main(int argc, char* argv[]){
 
 	 
 }
-void *printMessages(Messageobj newMessage)
+void *printMessages(Messageobj newMessage, bool recvFlag)
 {
 	
 	if(newMessage.newmsg.messageType==DATA)
@@ -407,11 +411,11 @@ void *printMessages(Messageobj newMessage)
 	   	   //cout<<"seq "<<newMessage.newmsg.seqNum<<" seqChk "<<seqChk<<endl;
 	   	   
 	   	   if(newMessage.newmsg.seqNum==seqChk){
-		   cout<<newMessage.newmsg.name<<":: "<<newMessage.newmsg.mess<<endl;
+		   cout<<"seq "<<newMessage.newmsg.seqNum<<" "<<newMessage.newmsg.name<<":: "<<newMessage.newmsg.mess<<endl;
 
 		   if(recvFlag){
 	   	   		msgOrder.pop();
-	   	   		recvFlag=false;
+	   	   		//recvFlag=false;
 	   	   	}
 		   seqChk=seqChk+1;
 		   }
@@ -423,8 +427,10 @@ void *printMessages(Messageobj newMessage)
 		   seqNext=msgOrder.front().newmsg.seqNum;
 
 		   if(seqNext==seqChk){
-		   	recvFlag=true;
-		   	printMessages(msgOrder.front());
+		   	//recvFlag=true;
+		   	mPrint.lock();
+		   	printMessages(msgOrder.front(),true);
+		   	mPrint.unlock();
 		   }
 	   }
 	if(newMessage.newmsg.messageType==NOTIFICATION)
@@ -471,7 +477,11 @@ void *receiver_handler(void *)
 			
 		}
 		
-		else printMessages(newIncomingMessage);
+		else {
+			mPrint.lock();
+			printMessages(newIncomingMessage,false);
+			mPrint.unlock();
+			}
 	}
 }
 
@@ -494,7 +504,10 @@ void *seq_mess_sender_handler(void *)
 		struct Messageobj newmess;
 		newmess.newmsg=msgg;
 		//cout<<initSeq.name<<":"<<newmess.newmsg.mess<<endl;
-		printMessages(newmess);
+		mPrint.lock();
+		printMessages(newmess,false);
+		mPrint.unlock();
+	    
 	    for(int i=0;i<clientListCtr;i++){
 	    if (sendto(sock, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &clientList[i], newUser_slen)==-1) {
            error("sendto()");
@@ -561,7 +574,9 @@ void *addToMultiCastDS(Messageobj newMessage, sockaddr_in si_other)
 		newNotifMessage.newmsg=newNotice;
 	
 	  	multicast(newNotifMessage);
-		printMessages(newNotifMessage);
+	  	mPrint.lock();
+		printMessages(newNotifMessage,false);
+		mPrint.unlock();
 			
 			clientList[clientListCtr]=si_other;
 			clientListCtr++;
@@ -661,7 +676,9 @@ void *removefrommulticast(int client_remove,string name){
 	
 		struct Messageobj newNotifMessage; 
 		newNotifMessage.newmsg=newNotice;
-		printMessages(newNotifMessage);
+		mPrint.lock();
+		printMessages(newNotifMessage,false);
+		mPrint.unlock();
 	  	multicast(newNotifMessage);
  }
 
@@ -693,8 +710,9 @@ void *seq_receiver_handler(void *)
 					}
 			
 			    addToMultiCastDS(newIncomingMessage, si_other);
-				printMessages(newIncomingMessage);
-			         
+			    mPrint.lock();
+				printMessages(newIncomingMessage,false);
+			    mPrint.unlock();   
 					
 				}
 		else if(newMessageArrived == "group_leave"){
@@ -707,7 +725,9 @@ void *seq_receiver_handler(void *)
 		seq=seq+1;
 		newIncomingMessage.newmsg.seqNum=seq;
 		}
-		printMessages(newIncomingMessage);
+		mPrint.lock();
+		printMessages(newIncomingMessage,false);
+		mPrint.unlock();
 		multicast(newIncomingMessage);
 		}	
 	   
