@@ -1,6 +1,6 @@
 /**
 Description: CIS 505 Project 3
-Authors: Karthik Anantha Ram, Sanjeet Phatak, Sarath Vadakkepat
+Authors: Karthik Anantha Ram, Sanjeet Phatak and Sarath Vadakkepat
 **/
 
 #include <fcntl.h>
