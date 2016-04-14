@@ -1,3 +1,4 @@
+
 /**
 Description: CIS 505 Project 3
 Authors: Karthik Anantha Ram, Sanjeet Phatak and Sarath Vadakkepat
@@ -383,6 +384,7 @@ void existGrpChat(ChatUser newUser)
         newUser.leaderPortNum= newIncomingMessage.newmsg.port;
         close(newUser_s);
         close(client_s);
+		close(socket_leaderElection);
         existGrpChat(newUser);
     } else {
         cout<<newUser.name<<" joining a new chat on "<<newUser.seqIpAddr<<":"<<newUser.leaderPortNum<<", listening on "<<newUser.ipAddr<<":"<<newUser.portNumber<<endl;
@@ -647,11 +649,11 @@ int main(int argc, char* argv[])
         strcpy(initSeq.seqIpAddr,initSeq.ipAddr); 
         initSeq.UIRI++;
 
-        /*string temp_ipAddr="192.168.0.102";
+        string temp_ipAddr="192.168.0.102";
         strcpy(initSeq.ipAddr,temp_ipAddr.c_str());
         strcpy(initSeq.seqIpAddr,temp_ipAddr.c_str());
-        */
-        newGrpChat(initSeq);
+        
+		newGrpChat(initSeq);
 
     } else if(argc==3) {
        
@@ -683,9 +685,9 @@ int main(int argc, char* argv[])
         
         newUser.leaderElectionPort=10000+rand()%1000;
         
-        /*string temp_ipAddr="192.168.0.102";
+        string temp_ipAddr="192.168.0.102";
         strcpy(newUser.ipAddr,temp_ipAddr.c_str());
-        strcpy(newUser.seqIpAddr,temp_ipAddr.c_str());*/
+        strcpy(newUser.seqIpAddr,temp_ipAddr.c_str());
         
         
         existGrpChat(newUser);
@@ -828,19 +830,17 @@ void *receiver_handler(void *)
             error("recvfrom()");
         }
 
-        
+       
         
         string newMessageArrived(newIncomingMessage.newmsg.mess);
         string newMessage;
         Message msgg;
         if(newMessageArrived == "JOIN") {
 
-            Message giveSEQIPData;
-
-
-            strcpy(giveSEQIPData.mess, "INDIRECT");
-            strcpy(giveSEQIPData.ip, newUser.seqIpAddr);
-            giveSEQIPData.port=newUser.leaderPortNum;
+	        Message giveSEQIPData;
+	        strcpy(giveSEQIPData.mess, "INDIRECT");
+            strcpy(giveSEQIPData.ip, currentUser.seqIpAddr);
+            giveSEQIPData.port=currentUser.leaderPortNum;
             giveSEQIPData.messageType=INTERNAL;
 
             int leaderPortNum;
@@ -852,8 +852,6 @@ void *receiver_handler(void *)
             if (sendto(newUser_s, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
                 error("sendto() 13");
             }
-            //cout<<"request forwarded to seq"<<endl;
-
         }
 
         else {
