@@ -494,14 +494,21 @@ void *SendNewSeqMessageToClient(ChatUser initSeq, int tempUse_usrInGrpClientReco
 int eofCheck=0;
 void *getInput(void *)
 {
-    while(1){
-     if (std::getline(std::cin >> std::ws,mInput)) {
-        if(cin.eof()==1)
-                eofCheck=1;
-        inputFlag=1;
-        }
+  while(1){
      
+     if(inputFlag==0 && eofCheck==0){
       
+      getline(cin,mInput);  
+        
+        if(cin.eof()==1){
+                eofCheck=1;
+                break;
+            }
+            else{
+                inputFlag=1;
+                }
+
+            }
   }
 }
 
@@ -914,7 +921,11 @@ void *seq_mess_sender_handler(void *)
         }
       }
 
-
+       if(eofCheck==1)
+      {
+        eofCheck=0;
+        exit(0);
+      }
     }
 
 }
@@ -926,24 +937,14 @@ void *sender_handler(void *)
     
     while(1) {
 
-        if(inputFlag==1){
-
-            inputFlag=0;
         char send[1024];
         Message msgg;
       
-        if(eofCheck==1) {
-            strcpy(send, "group_leave");
-            msgg.messageType=INTERNAL;
-            check=1;
-            eofCheck=0;
-        } else {
-            
-            strcpy(send, mInput.c_str());
-            msgg.messageType=DATA;
-        }
-
+        if(inputFlag==1){
         
+        strcpy(send, mInput.c_str());
+        msgg.messageType=DATA;
+
         if(strcmp(send, "")!=0){
         strcpy(msgg.mess, send);
         strcpy(msgg.name, client_name);
@@ -952,7 +953,7 @@ void *sender_handler(void *)
         newmess.newmsg=msgg;
         //newmess.newmsg.port=(int)ntohs(newUser_si_other.
         
-        cout<<"The message = "<<msgg.mess<<endl;
+            cout<<"The message = "<<msgg.mess<<endl;
             cout<<"the seq num = "<<seq<<endl;
             cout<<"the seq check = "<<seqChk<<endl;
         
@@ -961,12 +962,41 @@ void *sender_handler(void *)
         
         if (sendto(newUser_s, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
             error("sendto() 11");
-
+            }
         }
-        }
-        if(check==1)
-            exit(0);
+        inputFlag=0;
     }
+        
+        if(eofCheck==1) {
+           // cout<<"leaving "<<endl;
+            strcpy(send, "group_leave");
+            msgg.messageType=INTERNAL;
+            //check=1;
+            
+
+        if(strcmp(send, "")!=0){
+        strcpy(msgg.mess, send);
+        strcpy(msgg.name, client_name);
+
+        struct Messageobj newmess;
+        newmess.newmsg=msgg;
+        //newmess.newmsg.port=(int)ntohs(newUser_si_other.
+        
+            cout<<"The message = "<<msgg.mess<<endl;
+            cout<<"the seq num = "<<seq<<endl;
+            cout<<"the seq check = "<<seqChk<<endl;
+        
+        
+            
+        
+        if (sendto(newUser_s, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
+            error("sendto() 11");
+            }
+        }
+        eofCheck=0;
+        exit(0);
+        } 
+
     }
 }
 
