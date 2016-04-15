@@ -391,6 +391,7 @@ void existGrpChat(ChatUser newUser)
         close(client_s);
         close(socket_leaderElection);
         existGrpChat(newUser);
+        return;
     } else {
         cout<<newUser.name<<" joining a new chat on "<<newUser.seqIpAddr<<":"<<newUser.leaderPortNum<<", listening on "<<newUser.ipAddr<<":"<<newUser.portNumber<<endl;
         seqChk=newIncomingMessage.newmsg.seqNum+1;
