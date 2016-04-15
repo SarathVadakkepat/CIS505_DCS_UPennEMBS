@@ -72,6 +72,7 @@ socklen_t newUser_slen=sizeof(newUser_si_other);
 socklen_t slen;
 
 struct sockaddr_in si_me, si_other;
+pthread_t getLine;
 
 //Variables for sequencer
 
@@ -204,7 +205,7 @@ void *KillAllThreads123(void *)
             //cout<<"Thread 1 cancel "<<endl;
         }
         
-    cout<<"Trying to kill 3"<<endl;
+   // cout<<"Trying to kill 3"<<endl;
         while(pthread_kill(thread_3, 0) == 0)
         {
             pthread_cancel(thread_3);
@@ -237,7 +238,7 @@ void *KillAllThreads124(void *)
             //cout<<"Thread 1 cancel "<<endl;
         }
         
-    cout<<"Trying to kill 4"<<endl;
+    //cout<<"Trying to kill 4"<<endl;
         while(pthread_kill(thread_4, 0) == 0)
         {
             pthread_cancel(thread_4);
@@ -295,6 +296,8 @@ void existGrpChat(ChatUser newUser)
     if( bind(newUser_s , (struct sockaddr*)&si_user, sizeof(si_user) ) == -1) {
         error("bind 1");
     }
+
+    cout<<"yo in exist chat "<<newUser.seqIpAddr<<endl;
 
     if (inet_aton(newUser.seqIpAddr, &newUser_si_other.sin_addr) == 0)  {
         fprintf(stderr, "inet_aton() failed\n");
@@ -437,16 +440,15 @@ void existGrpChat(ChatUser newUser)
     //cout<<"Killed all and im here"<<endl;
     
     //Replace while with thread join
-    while(check==1) {
+    /*while(check==1) {
         return;
-    }
+    }*/
+    //return;
 }
 
 void *SendNewSeqMessageToClient(ChatUser initSeq, int tempUse_usrInGrpClientRecordCtr)
 {
-    int leaderElectionSock;
-    struct sockaddr_in si_leaderElectionSock;
-    socklen_t leaderElectionSock_slen=sizeof(si_leaderElectionSock);
+    int leaderElectionSock; 
             
     if ( (leaderElectionSock=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
                 error("socket");
@@ -457,10 +459,19 @@ void *SendNewSeqMessageToClient(ChatUser initSeq, int tempUse_usrInGrpClientReco
     {
         if(usrInGrpClientRecord[i].leaderElectionPort != currentUser.leaderElectionPort)
         {
+            cout<<"Yo I m here 1"<<endl;
+            struct sockaddr_in si_leaderElectionSock;
+            socklen_t leaderElectionSock_slen=sizeof(si_leaderElectionSock);
             memset((char *) &si_leaderElectionSock, 0, sizeof(si_leaderElectionSock));
             si_leaderElectionSock.sin_family = AF_INET;
             si_leaderElectionSock.sin_port = htons(usrInGrpClientRecord[i].leaderElectionPort);
             
+            if (inet_aton(usrInGrpClientRecord[i].ipAddr, &si_leaderElectionSock.sin_addr) == 0)  {
+            fprintf(stderr, "inet_aton() failed\n");
+            exit(1);
+            }
+
+
             Messageobj NewMessage;
             NewMessage.newmsg.messageType=LE_NewSeqMessage;
             
@@ -571,14 +582,9 @@ void newGrpChat(ChatUser initSeq)
     }
     
     
-    
-    //if(seqFailed==0)
-    //{
-    
-    
     pthread_create( &thread_1, NULL , seq_receiver_handler,(void*) 0);
     pthread_create( &thread_2, NULL , seq_mess_sender_handler,(void*) 0);
-     pthread_create( &thread_3, NULL , seq_ack_handler,(void*) 0);
+    pthread_create( &thread_3, NULL , seq_ack_handler,(void*) 0);
 
     if(seqFailed==1)
     {
@@ -588,13 +594,9 @@ void newGrpChat(ChatUser initSeq)
     pthread_join(thread_1,NULL);
     pthread_join(thread_2,NULL);
     
-    //pthread_join(thread_3,NULL);
-        
-    
-        
-        
-    //}
-        return;
+    pthread_join(thread_3,NULL);
+
+        //return;
 }
 
 string getIP()
@@ -630,10 +632,6 @@ string getIP()
     if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
     return ip;
 }
-
-
-pthread_t getLine;
-   
 
 int main(int argc, char* argv[])
 {
@@ -694,6 +692,7 @@ int main(int argc, char* argv[])
         
         existGrpChat(newUser);
         
+        cout<<"yo in main"<<endl;
         if(seqShifted==1)
         {
             cout<<"Case of shifting to a new sequencer"<<endl;
@@ -717,21 +716,11 @@ int main(int argc, char* argv[])
         
         if(seqFailed==1)
         {
-            //Close all old ports
+            
             close(client_s);
             close(socket_leaderElection);
             close(newUser_s);
-            //cout<<"All sockets closed"<<endl;
-            
-            //Kill all old threads
-            
-            //Reset Data fields
-            
-            
-            
-            
-            
-            
+
             pthread_cancel(thread_3);
             
             while(pthread_kill(thread_3, 0) == 0)
@@ -739,7 +728,7 @@ int main(int argc, char* argv[])
             pthread_cancel(thread_3);
         }
             
-                cout<<"Case of being new sequencer"<<endl;
+            cout<<"Case of being new sequencer"<<endl;
             
             memset((char *) &newUser_si_other, 0, sizeof(newUser_si_other));
             memset((char *) &si_user, 0, sizeof(si_user));
@@ -1063,6 +1052,11 @@ void *SequencerVanished()
             si_leaderElectionSock.sin_family = AF_INET;
             si_leaderElectionSock.sin_port = htons(usrInGrpClientRecord[i].leaderElectionPort);
             
+            if (inet_aton(usrInGrpClientRecord[i].ipAddr, &si_leaderElectionSock.sin_addr) == 0)  {
+            fprintf(stderr, "inet_aton() failed\n");
+            exit(1);
+            }
+
             Messageobj NewMessage;
             NewMessage.newmsg.messageType=LE_PortSend;
             
@@ -1083,14 +1077,14 @@ void *SequencerVanished()
                 
             if(leaderElectionCount==(usrInGrpClientRecordCtr-1))
             {
+                
                 Messageobj t1;
                 strcpy(t1.newmsg.mess, "We have a winner whose port is = ");
                 strcat(t1.newmsg.mess, ToString(currentUser.portNumber).c_str());
                 SimplyPrint(t1);
                 becomeSeqFlag=1;
                 break;
-                
-                
+                                
             }
             }
             
@@ -1108,7 +1102,6 @@ void *SequencerVanished()
         
         pthread_t abc;
         pthread_create( &abc , NULL , KillAllThreads124,(void*) 0);
-        
                 
     }
     
@@ -1226,7 +1219,6 @@ void *client_ack_handler(void *)
             sFailed=1;
             break;
         }
-
     }
     
     if(sFailed==1) SequencerVanished();
