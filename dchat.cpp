@@ -21,7 +21,8 @@ Authors: Karthik Anantha Ram, Sanjeet Phatak and Sarath Vadakkepat
 #include <sstream>
 #include <time.h>
 #include <queue>
-#include<chrono>
+#include <chrono>
+#include <vector>
 #include <mutex>
 
 #define NOTIFICATION 1
@@ -133,7 +134,8 @@ struct Messageobj {
 
 struct Messageobj mess1;
 
-queue<Messageobj> msgOrder;
+vector<Messageobj> holdBack;
+//holdBack.reserve(1000);
 ChatUser initSeq;
 ChatUser newUser;
 
@@ -384,7 +386,7 @@ void existGrpChat(ChatUser newUser)
         newUser.leaderPortNum= newIncomingMessage.newmsg.port;
         close(newUser_s);
         close(client_s);
-		close(socket_leaderElection);
+        close(socket_leaderElection);
         existGrpChat(newUser);
     } else {
         cout<<newUser.name<<" joining a new chat on "<<newUser.seqIpAddr<<":"<<newUser.leaderPortNum<<", listening on "<<newUser.ipAddr<<":"<<newUser.portNumber<<endl;
@@ -649,11 +651,11 @@ int main(int argc, char* argv[])
         strcpy(initSeq.seqIpAddr,initSeq.ipAddr); 
         initSeq.UIRI++;
 
-        string temp_ipAddr="192.168.0.102";
+        /*string temp_ipAddr="192.168.0.102";
         strcpy(initSeq.ipAddr,temp_ipAddr.c_str());
-        strcpy(initSeq.seqIpAddr,temp_ipAddr.c_str());
+        strcpy(initSeq.seqIpAddr,temp_ipAddr.c_str());*/
         
-		newGrpChat(initSeq);
+        newGrpChat(initSeq);
 
     } else if(argc==3) {
        
@@ -685,9 +687,9 @@ int main(int argc, char* argv[])
         
         newUser.leaderElectionPort=10000+rand()%1000;
         
-        string temp_ipAddr="192.168.0.102";
+        /*string temp_ipAddr="192.168.0.102";
         strcpy(newUser.ipAddr,temp_ipAddr.c_str());
-        strcpy(newUser.seqIpAddr,temp_ipAddr.c_str());
+        strcpy(newUser.seqIpAddr,temp_ipAddr.c_str());*/
         
         
         existGrpChat(newUser);
@@ -766,34 +768,43 @@ void *printMessages(Messageobj newMessage, bool recvFlag)
 {
 
     if(newMessage.newmsg.messageType==DATA) {
-        //cout<<"seq "<<newMessage.newmsg.seqNum<<" seqChk "<<seqChk<<endl;
-
-        //cout<<"seq "<<newMessage.newmsg.seqNum<<" "<<newMessage.newmsg.name<<" "<<newMessage.newmsg.port<<":: "<<newMessage.newmsg.mess<<endl;
-
-        
         
         if(newMessage.newmsg.seqNum==seqChk) {
             
-            
             cout<<"seq "<<newMessage.newmsg.seqNum<<" "<<newMessage.newmsg.name<<":: "<<newMessage.newmsg.mess<<endl;
-
-            if(recvFlag) {
-                msgOrder.pop();
-                //recvFlag=false;
-            }
             seqChk=seqChk+1;
-        } else {
-            msgOrder.push(newMessage);
+
+            if(recvFlag)
+            {
+            int j;
+             for(j=0; j < holdBack.size(); j++) 
+             {
+                if(holdBack[j].newmsg.seqNum==seqChk-1)
+                    holdBack.erase(holdBack.begin()+j);
+             }
+            }
+        } 
+
+        else
+        {
+            holdBack.push_back(newMessage); 
         }
 
-        seqNext=msgOrder.front().newmsg.seqNum;
+            if(!holdBack.empty())
+            {
+            int i;
+             for(i=0; i < holdBack.size(); i++) 
+             {
+                if(holdBack[i].newmsg.seqNum==seqChk)
+                {
+                    mPrint.lock();
+                    printMessages(holdBack[i],true);
+                    mPrint.unlock();
+                }
+             }
 
-        if(seqNext==seqChk) {
-            //recvFlag=true;
-            mPrint.lock();
-            printMessages(msgOrder.front(),true);
-            mPrint.unlock();
         }
+
     }
     if(newMessage.newmsg.messageType==NOTIFICATION) {
         cout<<newMessage.newmsg.mess<<endl;
@@ -837,8 +848,8 @@ void *receiver_handler(void *)
         Message msgg;
         if(newMessageArrived == "JOIN") {
 
-	        Message giveSEQIPData;
-	        strcpy(giveSEQIPData.mess, "INDIRECT");
+            Message giveSEQIPData;
+            strcpy(giveSEQIPData.mess, "INDIRECT");
             strcpy(giveSEQIPData.ip, currentUser.seqIpAddr);
             giveSEQIPData.port=currentUser.leaderPortNum;
             giveSEQIPData.messageType=INTERNAL;
