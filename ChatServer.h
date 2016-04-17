@@ -18,6 +18,16 @@
 #include <chrono>
 #include <vector>
 #include <mutex>
+#include<math.h>
+#include <cstdlib>
+
+
+
+
+
+
+
+
 
 #define CHATUSERS_COUNT 10
 
@@ -87,6 +97,24 @@ struct sendPar{
 	Messageobj m;
 };
 
+vector<string> split(string str, char delimiter) {
+  vector<string> internal;
+  stringstream ss(str); // Turn the string into a stream.
+  string tok;
+  
+  while(getline(ss, tok, delimiter)) {
+    internal.push_back(tok);
+  }
+  
+  return internal;
+}
+
+//Encrypted
+long int p,q,i,n,t,j,m[512],d[512], temp[512], e[512],en[512],flag;
+int prime(long int);
+void ce();
+long int cd(long int);
+
 
 //Variables for client_Bind
 struct sockaddr_in si_user;
@@ -143,6 +171,9 @@ void *InitiateReconnect(Messageobj newSeq);
 void *seq_send(void* sendd);
 string ToString(int val);
 void *android_interface_receiver_handler(void *);
+string decrypt(string mainMesg);
+string encrypt(string msg);
+
 
 string getIP()
 {
@@ -201,3 +232,282 @@ string ToString(int val)
     return toReturn;
 
 }
+
+string decrypt(string mainMesg)
+{
+	
+	vector<string> MainSplit = split(mainMesg, '$');
+	
+	long int en[512], temp[512];
+	vector<string> en1 = split(MainSplit[0], ',');
+	vector<string> temp1 = split(MainSplit[1], ',');
+	
+	int n=atoi(MainSplit[2].c_str());
+	int key=atoi(MainSplit[3].c_str());
+	
+	for(int ctr=0;ctr<512;ctr++) { en[ctr]=0; temp[ctr]=0;}
+	
+	for(int ctr=0;ctr<en1.size();ctr++) en[ctr]=atoi(en1[ctr].c_str());
+	for(int ctr=0;ctr<temp1.size();ctr++) temp[ctr]=atoi(temp1[ctr].c_str());
+	
+	long int pt, ct, k, m[512];
+    long int i = 0, j;
+	
+    while (en[i] != -1)
+    {
+        ct = temp[i];
+        k = 1;
+        for (j = 0; j < key; j++)
+        {
+            k = k * ct;
+            k = k % n;
+        }
+        pt = k + 96;
+        m[i] = pt;
+        i++;
+    }
+    m[i] = -1;
+	
+	cout << "\nTHE DECRYPTED MESSAGE IS\n";
+    	
+	char decryptedMessageChar[1024];
+	bzero(decryptedMessageChar, 1024);
+	for (i = 0; m[i] != -1; i++)
+	{
+		
+		char as=m[i];
+		cout<<as;
+		//string a((char *)W);
+		//strcat(decryptedMessageChar, as);
+		
+	}
+	cout<<"\n"<<endl;
+	string DecryptedMessage(decryptedMessageChar);
+	//cout<<DecryptedMessage<<endl;
+	return DecryptedMessage;
+	
+}
+
+
+
+
+
+class RandomPrimeGenerator
+{
+      public:
+      RandomPrimeGenerator(){ srand(time(0));}
+      ~RandomPrimeGenerator(){}
+
+      void init_fast(unsigned int _max_number);
+    
+
+      unsigned int get();
+      
+      private:
+      unsigned int max_number;
+      unsigned int max_prime_count;
+      vector<unsigned int> prime_list;
+      void find_primes();
+};
+
+
+void RandomPrimeGenerator::find_primes()
+{
+     prime_list.clear();
+     prime_list.push_back(2);
+     
+     int i,j;
+     unsigned int size=prime_list.size();
+     bool is_prime;
+     unsigned int cur_prime;
+     for (i=3; max_number==0||i<=max_number; i+=2)
+     {
+         is_prime=true;
+         for (j=0; j<size; j++)
+         {
+             cur_prime=prime_list[j];
+             if (i<cur_prime*cur_prime) break;
+             
+             if (i%cur_prime==0) {is_prime=false; break;}
+         }
+         if (is_prime)
+         {
+            prime_list.push_back(i);
+            size++;
+            if (max_prime_count!=0&&size==max_prime_count) break;
+         }
+     }
+}
+
+void RandomPrimeGenerator::init_fast(unsigned int _max_number)
+{
+     max_number=_max_number;
+     max_prime_count=0;
+    
+     find_primes();
+}
+
+unsigned int RandomPrimeGenerator::get()
+{
+       unsigned int size=prime_list.size();
+        unsigned int index=int(0.5+(size-1)*(rand()/double(RAND_MAX)));
+        return prime_list[index];
+       
+}
+
+
+int prime(long int pr)
+{
+    int i;
+    j = sqrt(pr);
+    for (i = 2; i <= j; i++)
+    {
+        if (pr % i == 0)
+            return 0;
+    }
+    return 1;
+}
+
+
+void ce()
+{
+    int k;
+    k = 0;
+    for (i = 2; i < t; i++)
+    {
+        if (t % i == 0)
+            continue;
+        flag = prime(i);
+        if (flag == 1 && i != p && i != q)
+        {
+            e[k] = i;
+            flag = cd(e[k]);
+            if (flag > 0)
+            {
+                d[k] = flag;
+                k++;
+            }
+            if (k == 99)
+                break;
+        }
+    }
+}
+long int cd(long int x)
+{
+    long int k = 1;
+    while (1)
+    {
+        k = k + t;
+        if (k % x == 0)
+            return (k / x);
+    }
+}
+
+string encrypt(string Imsg)
+{
+	
+	RandomPrimeGenerator rpg;
+       
+	rpg.init_fast(100);
+	int prime1 = rpg.get();
+	int prime2=rpg.get();
+	cout<<prime1<<endl;
+	cout<<prime2<<endl;
+    
+	p=7;
+	q=17;
+	p=prime1;
+	q=prime2;
+  
+	
+	
+	char msg[256];
+	strcpy(msg, Imsg.c_str());
+	int stringLength=strlen(msg);
+
+	for (i = 0; i<stringLength; i++){
+     	m[i] = msg[i];
+		}
+	
+    n = p * q;
+    t = (p - 1) * (q - 1);
+    ce();
+	
+	
+    long int pt, ct, key = e[0], k, len;
+    i = 0;
+    len = strlen(msg);
+    while (i != len)
+    {
+        pt = m[i];
+        pt = pt - 96;
+        k = 1;
+        for (j = 0; j < key; j++)
+        {
+            k = k * pt;
+            k = k % n;
+        }
+        temp[i] = k;
+        ct = k + 96;
+        en[i] = ct;
+        i++;
+    }
+    en[i] = -1;
+    
+	char encryptedMessageChar[1024];
+	bzero(encryptedMessageChar,1024);
+	
+	char encryptedMessageNum[1024];
+	bzero(encryptedMessageNum,1024);
+	
+	char encryptedMessageTempChar[1024];
+	char encryptedMessageTempNum[1024];
+	bzero(encryptedMessageTempNum,1024);
+	
+	for(i=0;i<512;i++){
+	
+		int msg=en[i];
+			
+		if(msg!=-1){	
+
+		strcat(encryptedMessageNum, ToString(msg).c_str());
+		strcat(encryptedMessageNum, ",");
+			
+		}
+		
+		if(msg==-1)
+		{
+			strcat(encryptedMessageNum, ToString(msg).c_str());
+		    strcat(encryptedMessageNum, ",");
+			break;
+		}
+}
+	
+	for(i=0;i<512;i++) {
+	
+		int tem=temp[i];
+		if(tem!=0){
+		
+		strcat(encryptedMessageTempNum, ToString(tem).c_str());
+		strcat(encryptedMessageTempNum, ",");
+			
+		}
+		
+	}
+	
+	string EncryptedMessage(encryptedMessageNum);
+	string EncryptedMessageTemp(encryptedMessageTempNum);
+	
+	EncryptedMessage=EncryptedMessage+"$"+EncryptedMessageTemp+"$"+ToString(n)+"$"+ToString(d[0])+"$";
+	cout<<EncryptedMessage<<endl;
+	
+	
+	return EncryptedMessage;
+	
+	
+	
+}
+
+
+
+
