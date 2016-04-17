@@ -71,6 +71,8 @@ public:
 	
 	sockaddr_in multicastSockAddr;
 	sockaddr_in hbSockAddr;
+	
+	int clientType=0;
 };
 
 
@@ -140,6 +142,7 @@ void *SendNewSeqMessageToClient(ChatUser initSeq);
 void *InitiateReconnect(Messageobj newSeq);
 void *seq_send(void* sendd);
 string ToString(int val);
+void *android_interface_receiver_handler(void *);
 
 string getIP()
 {
