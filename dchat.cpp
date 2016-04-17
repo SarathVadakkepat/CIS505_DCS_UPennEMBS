@@ -36,6 +36,8 @@ int inputFlag=0;
 unsigned long int seq_arr[100];
 unsigned long int notecnt=0;
 int eofCheck=0;
+
+int leaderElectionHappening=0;int numberOfMessageGot=0;
 //End
 
 string welcome_mess;
@@ -76,6 +78,8 @@ void initialize() {
     usrInGrpClientRecordCtr=0;
     seq=0;
     seqChk=1;
+	leaderElectionHappening=0;
+	numberOfMessageGot=0;
 }
 
 //Method to enable a user join a existing chat
@@ -84,6 +88,70 @@ void existGrpChat(ChatUser newUser)
     initialize();
     currentUser=newUser;
    
+	/*
+	// Struct and binding for Android Clients
+    
+    if ( (socket_Android=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
+        error("socket");
+    }
+    
+    memset((char *) &si_Android, 0, sizeof(si_Android));
+    si_Android.sin_family = AF_INET;
+    si_Android.sin_port = htons(80000);
+    si_Android.sin_addr.s_addr = htonl(INADDR_ANY);
+
+   
+	
+	 struct timeval tv2;
+    tv2.tv_sec       = 10;
+    tv2.tv_usec      = 1000;
+
+    if (setsockopt(socket_Android, SOL_SOCKET, SO_RCVTIMEO,&tv2,sizeof(tv2)) < 0) {
+        perror("Error");
+    }
+
+     if( bind(socket_Android , (struct sockaddr*)&si_Android, sizeof(si_Android) ) == -1) {
+       // error("bind 4");
+    }
+	
+	struct Messageobj newIncomingMessage1;
+    if (recvfrom(socket_Android, &newIncomingMessage1, sizeof(struct Messageobj), 0, (struct sockaddr *) &si_Android, &si_Android_slen) == -1) {
+        
+       cout<<"OOps didnt reveing in time"<<endl;
+		android=0;
+    }
+    //Struct or Android
+	
+	
+	if(android==1)
+	{
+		cout<<"android user"<<endl;
+		
+		pthread_t androidRecv, androidSend;
+		pthread_create( &androidRecv , NULL , android_interface_receiver_handler,(void*) 0);
+       
+		currentUser.clientType=ANDROID;
+		
+		 tv2.tv_sec       = 0;
+   		 tv2.tv_usec      = 0;
+			if (setsockopt(socket_Android, SOL_SOCKET, SO_RCVTIMEO,&tv2,sizeof(tv2)) < 0) {
+        perror("Error");
+    		}
+	}
+	
+	else
+		
+	{
+	 cout<<"Not an android user"<<endl;
+		close(socket_Android);
+	}
+	
+	
+	*/
+	
+	
+	
+	
     if ( (newUser_s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
         error("socket");
     }
@@ -392,6 +460,12 @@ int main(int argc, char* argv[])
     srand(time(NULL));
     
     if(argc==2) {
+		
+		/* EC : 7
+		string message = "gnome-terminal -e 'sh -c \"./guiInterface\"'";
+	    system(message.c_str());
+		
+		*/
     
         ChatUser initSeq;
         
@@ -407,9 +481,9 @@ int main(int argc, char* argv[])
         strcpy(initSeq.seqIpAddr,initSeq.ipAddr); 
         initSeq.UIRI++;
 
-      /*  string temp_ipAddr="192.168.0.101";
+        string temp_ipAddr="192.168.0.101";
         strcpy(initSeq.ipAddr,temp_ipAddr.c_str());
-        strcpy(initSeq.seqIpAddr,temp_ipAddr.c_str());*/
+        strcpy(initSeq.seqIpAddr,temp_ipAddr.c_str());
         
         newGrpChat(initSeq);
 
@@ -443,13 +517,16 @@ int main(int argc, char* argv[])
         
         newUser.leaderElectionPort=10000+rand()%1000;
         
-        /*string temp_ipAddr="192.168.0.101";
+        string temp_ipAddr="192.168.0.101";
         strcpy(newUser.ipAddr,temp_ipAddr.c_str());
         strcpy(newUser.seqIpAddr,temp_ipAddr.c_str());
-        */
+        
         
         existGrpChat(newUser);
         
+		//while(seqShifted==1 ||  seqFailed==1)
+		//{
+			
         if(seqShifted==1) {
             
             close(client_s);
@@ -483,7 +560,8 @@ int main(int argc, char* argv[])
             
             newGrpChat(currentUser);
             
-        }
+         }
+	 //}
         
         pthread_join(getLine,NULL);
         return 0;
@@ -641,6 +719,18 @@ void *receiver_handler(void *)
             
             printMessages(newIncomingMessage,false);
             
+			/* EC : 7
+			if(currentUser.clientType==ANDROID)
+			{
+				cout<<"sending to android interface"<<endl;
+				if (sendto(socket_Android, &newIncomingMessage, sizeof(struct Messageobj), 0, (struct sockaddr *) &si_Android, si_Android_slen) == -1) {
+          		  error("recvfrom()");
+       			 }
+					
+			}
+			*/
+			
+			
         }
     }
 }
@@ -831,8 +921,15 @@ void *seq_ack_handler(void *)
 
 void *SequencerVanished()
 {
+	leaderElectionHappening=1;
     int becomeSeqFlag=0;
     
+	
+	//if(usrInGrpClientRecordCtr>1) {
+	
+	//cout<<"number of user in group client record = "<<usrInGrpClientRecordCtr<<endl;
+	//cout << "Entering sequencer vanished "<<endl;
+		
     int leaderElectionSock;
 
     struct sockaddr_in si_leaderElectionSock;
@@ -883,7 +980,12 @@ void *SequencerVanished()
             
         }
     }
-    
+	//}
+	//else{
+		//cout<<"Directly going to become sequencer "<<endl;
+	//	becomeSeqFlag=1;
+		
+	//}
     if(becomeSeqFlag==1) {
     
         currentUser.isSequencer=true;
@@ -900,6 +1002,14 @@ void *SequencerVanished()
 
 void *leaderElection_handler(void *)
 {
+	/* Added Extra
+	struct timeval tv;
+    tv.tv_sec       = 5;
+   	tv.tv_usec      = 1000;
+	
+	int numberOfMessageGot=0;
+	*/
+	
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
     
     int beginSwitch=0;
@@ -911,11 +1021,21 @@ void *leaderElection_handler(void *)
         struct Messageobj newmess;
         
         if (recvfrom(socket_leaderElection, &newmess, sizeof(struct Messageobj), 0, (struct sockaddr *) &si_leaderElection, &si_leaderElection_slen) == -1) {
-                error("recvfrom()");
+               
+			/* Added Extra 
+				if(leaderElectionHappening==1){
+				cout<<"THe potential leader has vanished i guess"<<endl;
+			    potentialLeaderVanished=1;
+			    numberOfMessageGot=0;
+			}
+			
+			*/
         }
         
         if(newmess.newmsg.messageType==LE_PortSend)
         {
+			numberOfMessageGot++;
+			
             int clientPortToCompare=atoi(newmess.newmsg.mess);
             
             if(clientPortToCompare>currentUser.portNumber)
@@ -940,6 +1060,20 @@ void *leaderElection_handler(void *)
                      error("sendto() 7");
                 }
             }
+			
+			/* Added Extra 
+			if(numberOfMessageGot==(usrInGrpClientRecordCtr-1)){
+			
+			 cout<<"Setting timeout"<<endl;
+
+    		if (setsockopt(socket_leaderElection, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
+       				 perror("Error");
+   			 }		
+			
+			cout<<"Setting timeout Done"<<endl;
+			}
+			*/
+			
         }
         
         if(newmess.newmsg.messageType==LE_NewSeqMessage)
@@ -1181,3 +1315,24 @@ void *seq_receiver_handler(void *)
         }
     }
 }
+
+/*
+void *android_interface_receiver_handler(void *)
+{
+	
+	while(1){
+	
+	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+    struct Messageobj newIncomingMessage;
+	
+	if (recvfrom(socket_Android, &newIncomingMessage, sizeof(struct Messageobj), 0, (struct sockaddr *) &si_Android, &si_Android_slen) == -1) {
+            error("recvfrom()");
+        }
+	
+	if (sendto(newUser_s, &newIncomingMessage, sizeof(struct Messageobj), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
+            error("sendto() 11");
+	    }
+	}
+}
+
+*/
