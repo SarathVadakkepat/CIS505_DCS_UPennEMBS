@@ -42,37 +42,37 @@ string welcome_mess;
 
 void *KillAllThreads(void *)
 {
-	if(killThread_A!=0)	{
+    if(killThread_A!=0) {
     while(pthread_kill(thread_1, 0) == 0) {
             pthread_cancel(thread_1);
          }
-	}
-	if(killThread_B!=0) {
-		
-		while(pthread_kill(thread_2, 0) == 0) {
+    }
+    if(killThread_B!=0) {
+        
+        while(pthread_kill(thread_2, 0) == 0) {
             pthread_cancel(thread_2);
         }
-	}
-	if(killThread_C!=0)	{
+    }
+    if(killThread_C!=0) {
         while(pthread_kill(thread_3, 0) == 0) {
             pthread_cancel(thread_3);
             
         }
-	}  
-	
-	if(killThread_D!=0)	{
+    }  
+    
+    if(killThread_D!=0) {
         while(pthread_kill(thread_4, 0) == 0) {
             pthread_cancel(thread_4);
             
         }
-	}  
-	killThread_A=0;killThread_B=0;killThread_D=0;killThread_C=0;
+    }  
+    killThread_A=0;killThread_B=0;killThread_D=0;killThread_C=0;
     pthread_exit(NULL);
 }
 
 void initialize() {
-	
-	usrInGrpSeqRecordCtr=0;
+    
+    usrInGrpSeqRecordCtr=0;
     usrInGrpClientRecordCtr=0;
     seq=0;
     seqChk=1;
@@ -91,8 +91,8 @@ void existGrpChat(ChatUser newUser)
     memset((char *) &newUser_si_other, 0, sizeof(newUser_si_other));
     newUser_si_other.sin_family = AF_INET;
     newUser_si_other.sin_port = htons(newUser.leaderPortNum);
-	
-	if ( (client_ack=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
+    
+    if ( (client_ack=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
         error("socket");
     }
 
@@ -166,6 +166,7 @@ void existGrpChat(ChatUser newUser)
     }
     
     struct Messageobj newIncomingMessage;
+
     if (recvfrom(newUser_s, &newIncomingMessage, sizeof(struct Messageobj), 0, (struct sockaddr *) &newUser_si_other, &newUser_slen) == -1) {
         cout<<"Sorry, no chat is active on "<<newUser.seqIpAddr<<":"<<newUser.leaderPortNum<<" try again later.Bye."<<endl;
         exit(-1);
@@ -197,7 +198,7 @@ void existGrpChat(ChatUser newUser)
         
     if(strcmp(newIncomingMessage.newmsg.mess,"INDIRECT")==0) {
         string leadIP(newIncomingMessage.newmsg.ip);
-        
+        cout<<"hey "<<endl;
         strcpy(newUser.seqIpAddr, leadIP.c_str());
         newUser.leaderPortNum= newIncomingMessage.newmsg.port;
         close(newUser_s);
@@ -226,14 +227,14 @@ void existGrpChat(ChatUser newUser)
             error("recvfrom()");
         }
 
-		usrInGrpClientRecord[i]=newIncomingMessage.CUser;
+        usrInGrpClientRecord[i]=newIncomingMessage.CUser;
         usrInGrpClientRecordCtr++;
-		
-		string name(newIncomingMessage.CUser.name);
+        
+        string name(newIncomingMessage.CUser.name);
         string ip(newIncomingMessage.CUser.ipAddr);
         string notif=name+ " "+ip+":"+ToString(newIncomingMessage.CUser.portNumber);
         strcpy(newIncomingMessage.newmsg.mess ,notif.c_str());
-		       
+               
         printMessages(newIncomingMessage,false);
         
     }
@@ -318,7 +319,7 @@ void newGrpChat(ChatUser initSeq)
     int i, recv_len;
     ack_slen= sizeof(si_ack);
 
-	if ((sock=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
+    if ((sock=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
         error("socket");
     }
 
@@ -354,7 +355,7 @@ void newGrpChat(ChatUser initSeq)
         perror("Error");
     }
     
-	if ((sendsock=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
+    if ((sendsock=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
         error("socket");
     }
 
@@ -363,15 +364,15 @@ void newGrpChat(ChatUser initSeq)
     si_send.sin_family = AF_INET;
     si_send.sin_port = htons(7000);
     si_send.sin_addr.s_addr = htonl(INADDR_ANY);
-	
-	if( bind(sendsock , (struct sockaddr*)&si_send, sizeof(si_send) ) == -1) {
+    
+    if( bind(sendsock , (struct sockaddr*)&si_send, sizeof(si_send) ) == -1) {
         error("bind old 5000");
     }
     
-	if (setsockopt(sendsock, SOL_SOCKET, SO_RCVTIMEO,&tv1,sizeof(tv1)) < 0) {
+    if (setsockopt(sendsock, SOL_SOCKET, SO_RCVTIMEO,&tv1,sizeof(tv1)) < 0) {
         perror("Error");
     }
-	
+    
     pthread_create( &thread_1, NULL , seq_receiver_handler,(void*) 0);
     pthread_create( &thread_2, NULL , seq_mess_sender_handler,(void*) 0);
     pthread_create( &thread_3, NULL , seq_ack_handler,(void*) 0);
@@ -389,16 +390,16 @@ int main(int argc, char* argv[])
 {
     pthread_create( &getLine , NULL , getInput,(void*) 0);
     srand(time(NULL));
-	
+    
     if(argc==2) {
     
-		ChatUser initSeq;
-		
-		initSeq.isSequencer=true;
+        ChatUser initSeq;
+        
+        initSeq.isSequencer=true;
         strcpy(initSeq.ipAddr,getIP().c_str()); 
         initSeq.portNumber=5000;
         initSeq.hbportNumber=6000;
-		initSeq.sendportNumber=7000;
+        initSeq.sendportNumber=7000;
         string temp_name=argv[1];
         strcpy(initSeq.name, temp_name.c_str()); 
         
@@ -406,15 +407,15 @@ int main(int argc, char* argv[])
         strcpy(initSeq.seqIpAddr,initSeq.ipAddr); 
         initSeq.UIRI++;
 
-        string temp_ipAddr="192.168.0.101";
+      /*  string temp_ipAddr="192.168.0.101";
         strcpy(initSeq.ipAddr,temp_ipAddr.c_str());
-        strcpy(initSeq.seqIpAddr,temp_ipAddr.c_str());
+        strcpy(initSeq.seqIpAddr,temp_ipAddr.c_str());*/
         
         newGrpChat(initSeq);
 
     } else if(argc==3) {
        
-		ChatUser newUser;
+        ChatUser newUser;
         newUser.isSequencer=false;
         strcpy(newUser.ipAddr,getIP().c_str()); 
        
@@ -442,10 +443,10 @@ int main(int argc, char* argv[])
         
         newUser.leaderElectionPort=10000+rand()%1000;
         
-        string temp_ipAddr="192.168.0.101";
+        /*string temp_ipAddr="192.168.0.101";
         strcpy(newUser.ipAddr,temp_ipAddr.c_str());
         strcpy(newUser.seqIpAddr,temp_ipAddr.c_str());
-        
+        */
         
         existGrpChat(newUser);
         
@@ -496,9 +497,9 @@ int main(int argc, char* argv[])
 
 void *printMessages(Messageobj newMessage, bool recvFlag)
 {
-	mPrint.lock();
-	 
-	if(newMessage.newmsg.messageType==DATA) {
+    mPrint.lock();
+     
+    if(newMessage.newmsg.messageType==DATA) {
         
         if(newMessage.newmsg.seqNum==seqChk) {
             
@@ -556,7 +557,7 @@ void *printMessages(Messageobj newMessage, bool recvFlag)
             }
         }
     }
-	 
+     
 mPrint.unlock();
 }
 
@@ -565,58 +566,61 @@ void *receiver_handler(void *)
 {
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
     int pointer=0;
-	int i;
+    int i;
     struct Messageobj newIncomingMessage;
-	struct sockaddr_in recv_si;
-	int isRepeat=0;
-	struct Messageobj newmesg;
-	Message acksend;
-	acksend.messageType = RECVD;
-	struct sockaddr_in seq_sendsock;
+    struct sockaddr_in recv_si;
+    int isRepeat=0;
+    struct Messageobj newmesg;
+    Message acksend;
+    acksend.messageType = RECVD;
+    struct sockaddr_in seq_sendsock;
     seq_sendsock.sin_family = AF_INET;
-	//int port=newUser.hbportNumber+1000;
+    //int port=newUser.hbportNumber+1000;
     seq_sendsock.sin_port = htons(7000);
-	socklen_t sizerecv = sizeof(recv_si);
+    socklen_t sizerecv = sizeof(recv_si);
     
-	if (inet_aton(currentUser.seqIpAddr, &seq_sendsock.sin_addr) == 0)  {
+    if (inet_aton(currentUser.seqIpAddr, &seq_sendsock.sin_addr) == 0)  {
             fprintf(stderr, "inet_aton() failed\n");
             exit(1);
             }
-	
-	while(1) {
+    
+    while(1) {
         isRepeat=0;
         if (recvfrom(newUser_s, &newIncomingMessage, sizeof(struct Messageobj), 0, (struct sockaddr *) &recv_si, &sizerecv) == -1) {
             error("recvfrom()");
         }
-		 sprintf( acksend.mess, "%ld", newIncomingMessage.newmsg.seqNum);
-   
-		//acksend.mess = (string)newIncomingMessage.newmsg.seqNum;
-		newmesg.newmsg=acksend;
-		
-		if (sendto(newUser_s, &newmesg, sizeof(struct Messageobj), 0 , (struct sockaddr *) &recv_si, sizerecv)==-1) {
+
+        string newMessageArrivedChk(newIncomingMessage.newmsg.mess);
+        sprintf( acksend.mess, "%ld", newIncomingMessage.newmsg.seqNum);
+        
+        //acksend.mess = (string)newIncomingMessage.newmsg.seqNum;
+        newmesg.newmsg=acksend;
+        
+        if(newMessageArrivedChk!="JOIN"){
+        if (sendto(newUser_s, &newmesg, sizeof(struct Messageobj), 0 , (struct sockaddr *) &recv_si, sizerecv)==-1) {
                 error("sendto() 13");
             }
-			
-		for(i=0;i<100;i++){
-			if(seq_arr[i]==newIncomingMessage.newmsg.seqNum){
-				isRepeat =1;
-		}
-		else if(pointer<100){
-			seq_arr[pointer] = newIncomingMessage.newmsg.seqNum;
-			pointer++;
-		}
-		else{
-			seq_arr[0] = newIncomingMessage.newmsg.seqNum;
-			pointer=1;
-		}
-		}
+        }
+            
+        for(i=0;i<100;i++){
+            if(seq_arr[i]==newIncomingMessage.newmsg.seqNum){
+                isRepeat =1;
+        }
+        else if(pointer<100){
+            seq_arr[pointer] = newIncomingMessage.newmsg.seqNum;
+            pointer++;
+        }
+        else{
+            seq_arr[0] = newIncomingMessage.newmsg.seqNum;
+            pointer=1;
+        }
+        }
        
         
         string newMessageArrived(newIncomingMessage.newmsg.mess);
         string newMessage;
         Message msgg;
         if(newMessageArrived == "JOIN") {
-
             Message giveSEQIPData;
             strcpy(giveSEQIPData.mess, "INDIRECT");
             strcpy(giveSEQIPData.ip, currentUser.seqIpAddr);
@@ -625,11 +629,10 @@ void *receiver_handler(void *)
 
             int leaderPortNum;
             string seqIpAddr;
-
             struct Messageobj newmess;
             newmess.newmsg=giveSEQIPData;
 
-            if (sendto(newUser_s, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &newUser_si_other, newUser_slen)==-1) {
+            if (sendto(newUser_s, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &recv_si, sizerecv)==-1) {
                 error("sendto() 13");
             }
         }
@@ -682,11 +685,11 @@ void *seq_mess_sender_handler(void *)
         for(int i=0; i<usrInGrpSeqRecordCtr; i++) {
             
             if(strcmp(send, "")!=0){
-				pthread_t sendseq;
-				struct sendPar* sendp = (struct sendPar*) malloc(sizeof(struct sendPar));
-				sendp->m = newmess;
-				sendp->info = usrInGrpSeqRecord[i].multicastSockAddr;
-				pthread_create( &sendseq , NULL , seq_send, sendp);
+                pthread_t sendseq;
+                struct sendPar* sendp = (struct sendPar*) malloc(sizeof(struct sendPar));
+                sendp->m = newmess;
+                sendp->info = usrInGrpSeqRecord[i].multicastSockAddr;
+                pthread_create( &sendseq , NULL , seq_send, sendp);
             }
         }
       }
@@ -701,27 +704,27 @@ void *seq_mess_sender_handler(void *)
 }
 
 void *seq_send(void* sendd){
-	struct Messageobj newmess;
-	struct sockaddr_in si_recv;
-	struct sendPar* sendp = (struct sendPar*) sendd;
-	newmess=sendp->m;
-	int t=0;
-	struct timeval tv;
+    struct Messageobj newmess;
+    struct sockaddr_in si_recv;
+    struct sendPar* sendp = (struct sendPar*) sendd;
+    newmess=sendp->m;
+    int t=0;
+    struct timeval tv;
     tv.tv_sec       = 1;
     tv.tv_usec      = 1000;
 
-	while(t<3){
-	if (sendto(sendsock, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &sendp->info, newUser_slen)==-1) {
+    while(t<3){
+    if (sendto(sendsock, &newmess, sizeof(struct Messageobj), 0 , (struct sockaddr *) &sendp->info, newUser_slen)==-1) {
                 error("sendto() 12 ");
             }
-	if(recvfrom(sendsock, &newmess, sizeof(struct Messageobj), 0, (struct sockaddr *) &si_recv, &send_slen) == -1){
+    if(recvfrom(sendsock, &newmess, sizeof(struct Messageobj), 0, (struct sockaddr *) &si_recv, &send_slen) == -1){
                 error("recvfromto() 12 ");
             }
-		if((int)ntohs(si_recv.sin_port)==(int)ntohs(sendp->info.sin_port)&& newmess.newmsg.messageType==RECVD){
-			break;
-		}
-		t++;
-	}
+        if((int)ntohs(si_recv.sin_port)==(int)ntohs(sendp->info.sin_port)&& newmess.newmsg.messageType==RECVD){
+            break;
+        }
+        t++;
+    }
 }
 
 void *sender_handler(void *)
@@ -821,9 +824,9 @@ void *seq_ack_handler(void *)
                     removefrommulticast(clientid1, clientname);
                     removeackclient(clientid2);
                   
-    			}
+                }
             }
-	    }
+        }
 }
 
 void *SequencerVanished()
@@ -888,7 +891,7 @@ void *SequencerVanished()
         seqFailed=1;
         
         pthread_t abc;
-		killThread_A=1;killThread_B=1;killThread_D=1;
+        killThread_A=1;killThread_B=1;killThread_D=1;
         pthread_create( &abc , NULL , KillAllThreads,(void*) 0);
                 
     }
@@ -957,8 +960,8 @@ void *leaderElection_handler(void *)
         seqShifted=1;
         
         pthread_t abc;
-		
-		killThread_A=1;killThread_B=1;killThread_C=1;
+        
+        killThread_A=1;killThread_B=1;killThread_C=1;
         pthread_create( &abc , NULL , KillAllThreads,(void*) 0);
         
         //InitiateReconnect(newSeqData);
@@ -1018,14 +1021,14 @@ void *addToMultiCastDS(Messageobj newMessage, sockaddr_in si_other)
         struct Messageobj newNotifMessage;
         newNotifMessage.newmsg=newNotice;
         newNotifMessage.CUser=newMessage.CUser;
-		notecnt++;
+        notecnt++;
         newNotifMessage.newmsg.noteNum=notecnt;
-		
+        
         multicast(newNotifMessage);
         printMessages(newNotifMessage,false);
-       		
-    	newMessage.CUser.hbSockAddr=create_sock_struct(newMessage);
-		newMessage.CUser.multicastSockAddr=si_other;
+            
+        newMessage.CUser.hbSockAddr=create_sock_struct(newMessage);
+        newMessage.CUser.multicastSockAddr=si_other;
     }
 
     usrInGrpSeqRecord[usrInGrpSeqRecordCtr]=newMessage.CUser;
@@ -1033,7 +1036,7 @@ void *addToMultiCastDS(Messageobj newMessage, sockaddr_in si_other)
     
     //Sending number of users
     char message[1024];
-	strcpy(message,ToString(usrInGrpSeqRecordCtr).c_str());
+    strcpy(message,ToString(usrInGrpSeqRecordCtr).c_str());
 
     if (sendto(sock, &message, sizeof(message), 0 , (struct sockaddr *) &si_other, newUser_slen)==-1) {
         error("sendto() 5");
@@ -1042,7 +1045,7 @@ void *addToMultiCastDS(Messageobj newMessage, sockaddr_in si_other)
     //Sending User Data
     struct Messageobj existUserList;
     for(int i=0; i<usrInGrpSeqRecordCtr; i++) {
-		
+        
         existUserList.newmsg.messageType=NOTIFICATION;
         existUserList.CUser=usrInGrpSeqRecord[i];
         
@@ -1057,10 +1060,10 @@ void *multicast(Messageobj newMessage)
     for(int i=0; i<usrInGrpSeqRecordCtr; i++) {
 
         pthread_t sendseq;
-		struct sendPar* sendp = (struct sendPar*) malloc(sizeof(struct sendPar));
-		sendp->m = newMessage;
-		sendp->info = usrInGrpSeqRecord[i].multicastSockAddr;
-		pthread_create( &sendseq , NULL , seq_send, sendp);
+        struct sendPar* sendp = (struct sendPar*) malloc(sizeof(struct sendPar));
+        sendp->m = newMessage;
+        sendp->info = usrInGrpSeqRecord[i].multicastSockAddr;
+        pthread_create( &sendseq , NULL , seq_send, sendp);
     }
 }
 
@@ -1094,11 +1097,11 @@ void *removefrommulticast(int client_remove,string name)
     string notif_msg="";
     notif_msg="NOTICE "+name+" left the chat or crashed ";
     strcpy(newNotice.mess ,notif_msg.c_str());
-	
+    
     struct Messageobj newNotifMessage;
     newNotifMessage.newmsg=newNotice;
-	notecnt++;
-	newNotifMessage.newmsg.noteNum=notecnt;
+    notecnt++;
+    newNotifMessage.newmsg.noteNum=notecnt;
     
     printMessages(newNotifMessage,false);
     multicast(newNotifMessage);
