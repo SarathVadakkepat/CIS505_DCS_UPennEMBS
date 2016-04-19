@@ -135,7 +135,10 @@ socklen_t newJoinUserack_slen=sizeof(si_ackclient);
 //send sequencer
 struct sockaddr_in si_send;
 int sendsock;
-socklen_t send_slen=sizeof(si_send);
+struct sockaddr_in si_clientsend;
+
+socklen_t send_slen=sizeof(si_clientsend);
+//socklen_t send_slen=sizeof(si_send);
 
 //variables for Leader Election
 int socket_leaderElection;
@@ -164,11 +167,11 @@ void *removefrommulticast(int client_remove, string name);
 void *seq_indirect_joining_handler(void *);
 void *client_ack_handler(void *);
 void *seq_ack_handler(void *);
-void *removeackclient(int client_remove);
 void *leaderElection_handler(void *);
 void *SendNewSeqMessageToClient(ChatUser initSeq);
 void *InitiateReconnect(Messageobj newSeq);
 void *seq_send(void* sendd);
+void* client_send(void* sendd);
 string ToString(int val);
 void *android_interface_receiver_handler(void *);
 string decrypt(string mainMesg);
