@@ -21,6 +21,7 @@ struct ChatUser usrInGrpSeqRecord[CHATUSERS_COUNT];
 int usrInGrpSeqRecordCtr=0;
 
 vector<ChatUser> usrInGrpClientRecord;
+vector<Messageobj> priority_msg;
 
 unsigned long int seq=0;
 unsigned long int seqChk=1;
@@ -1739,18 +1740,44 @@ void *addToMultiCastDS(Messageobj newMessage, sockaddr_in si_other)
     }
 }
 
+void multicastSpawn(Messageobj newMessage)
+{
+		int i;
+	    for(i=0; i<usrInGrpSeqRecordCtr; i++) {
+        pthread_t sendseq;
+		struct sendPar* sendp = (struct sendPar*) malloc(sizeof(struct sendPar));
+		sendp->m = newMessage;
+		sendp->info = usrInGrpSeqRecord[i].multicastSockAddr;
+		pthread_create( &sendseq , NULL , seq_send, sendp);
+    }
+}
 
 void *multicast(Messageobj newMessage)
 {
-    for(int i=0; i<usrInGrpSeqRecordCtr; i++) {
-		
-        pthread_t sendseq;
-        struct sendPar* sendp = (struct sendPar*) malloc(sizeof(struct sendPar));
-		
-        sendp->m = newMessage;
-        sendp->info = usrInGrpSeqRecord[i].multicastSockAddr;
-        pthread_create( &sendseq , NULL , seq_send, sendp);
-    }
+    Messageobj sendMsg;
+	int k;
+	bool chkFlag=false;
+	priority_msg.push_back(newMessage);
+	
+	for(k=0;k<priority_msg.size();k++)
+	{
+		if(priority_msg[k].newmsg.messageType==NOTIFICATION)
+		{
+			sendMsg=priority_msg[k];
+			multicastSpawn(sendMsg);
+			priority_msg.erase(priority_msg.begin()+k);
+			chkFlag=true;
+		}
+			
+	}
+	
+	if(!chkFlag)
+	{
+		sendMsg=priority_msg[0];
+		multicastSpawn(sendMsg);
+		priority_msg.erase(priority_msg.begin());	
+	}
+	
 }
 
 void *removefrommulticast(int client_remove,string name)
